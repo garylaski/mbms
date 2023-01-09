@@ -14,6 +14,10 @@
                     <h1 id="release-name">{{release.name}}</h1>
                     <h2 id="release-artist-credit">{{release.artistCredit}}</h2>
                     <h3 id="release-date">{{release.date}}</h3>
+                    <div class="release-controls">
+                        <button class="play" onclick="play_tracks({{release.tracks.mbid}})">Play</button>
+                        <button class="queue" onclick="add_tracks({{release.tracks.mbid}})">Queue</button>
+                    </div>
                 </div>
                 <ul id="release-tracks">
                     {{release.tracks}}

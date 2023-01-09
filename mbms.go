@@ -98,10 +98,14 @@ func (server Server) generateReleaseHTML(release Release) string {
     html = strings.Replace(html, "{{release.coverUrl}}", url.PathEscape(release.coverUrl), -1)
     html = strings.Replace(html, "{{release.artistCredit}}", server.generateArtistCreditHTML(release.artistCredit), -1)
     trackHTML := ""
+    trackMbids := "["
     for _, track := range release.tracks {
         trackHTML += server.generateSmallTrackHTML(track)
+        trackMbids += "'" + track.mbid + "',"
     }
+    trackMbids = trackMbids[:len(trackMbids)-1] + "]"
     html = strings.Replace(html, "{{release.tracks}}", trackHTML, -1)
+    html = strings.Replace(html, "{{release.tracks.mbid}}", trackMbids, -1)
     return html
 }
 func (server Server) generateSmallReleaseHTML(release Release) string {
@@ -135,14 +139,17 @@ func (server Server) generateArtistCreditHTML(artistCredit ArtistCredit) string 
         artistCreditNameHTML = strings.Replace(artistCreditNameHTML, artistCreditName.name, fmt.Sprintf("<a href=\"../../artist/%s\" onclick=\"ajax('../../artist/%s'); return false;\">%s</a>", artistCreditName.artistMbid, artistCreditName.artistMbid, artistCreditName.name), -1)
     }
     return artistCreditNameHTML
+
 }
 func (server Server) generateSmallTrackHTML(track Track) string {
     html := string(server.smallTrackHTML)
     html = strings.Replace(html, "{{track.name}}", track.name, -1)
+    html = strings.Replace(html, "{{track.mbid}}", track.mbid, -1)
     html = strings.Replace(html, "{{track.number}}", strconv.Itoa(track.number), -1)
     html = strings.Replace(html, "{{track.length}}", strconv.Itoa(track.length), -1)
     html = strings.Replace(html, "{{track.url}}", url.PathEscape(track.url), -1)
-    html = strings.Replace(html, "{{track.artistCredit}}", server.generateArtistCreditHTML(track.artistCredit), -1)
+    artistCreditHTML := server.generateArtistCreditHTML(track.artistCredit)
+    html = strings.Replace(html, "{{track.artistCredit}}", artistCreditHTML, -1)
     return html
 }
 func artistHandler(w http.ResponseWriter, r *http.Request, server Server) {
@@ -216,6 +223,22 @@ func artistHandler(w http.ResponseWriter, r *http.Request, server Server) {
         fmt.Fprint(w, html)
     }
 }
+func (server Server) generateTrackJSON(track Track) string {
+    // manually converts Track object to JSON
+    json := "{"
+    name := strings.Replace(track.name, "\"", "\\\"", -1)
+    json += fmt.Sprintf("\"name\": \"%s\",", name)
+    json += fmt.Sprintf("\"number\": %d,", track.number)
+    json += fmt.Sprintf("\"length\": %d,", track.length)
+    json += fmt.Sprintf("\"url\": \"%s\",", url.PathEscape(track.url))
+    json += fmt.Sprintf("\"mbid\": \"%s\",", track.mbid)
+    artistCreditHTML := server.generateArtistCreditHTML(track.artistCredit)
+    //replace " with \"
+    artistCreditHTML = strings.Replace(artistCreditHTML, "\"", "\\\"", -1)
+    json += fmt.Sprintf("\"artistCredit\": \"%s\"", artistCreditHTML)
+    json += "}"
+    return json
+}
 func trackHandler(w http.ResponseWriter, r *http.Request, server Server) {
     mbid := strings.TrimPrefix(r.URL.Path, "/track/")
     if (mbid == "all") {
@@ -223,7 +246,40 @@ func trackHandler(w http.ResponseWriter, r *http.Request, server Server) {
         fmt.Fprint(w, html)
     } else {
         track := Track{}
-        html := server.generateTrackHTML(track)
+        query := "SELECT * FROM track WHERE mbid = ?"
+        rows, err := server.db.Query(query, mbid)
+        for rows.Next() {
+            err = rows.Scan(&track.id, &track.mbid, &track.name, &track.number, &track.artistCreditId, &track.length, &track.release, &track.url)
+            if err != nil {
+                log.Fatal(err)
+            }
+        }
+        query = "SELECT * FROM artist_credit WHERE id = ?"
+        row := server.db.QueryRow(query, track.artistCreditId)
+        if err := row.Scan(&track.artistCredit.id, &track.artistCredit.name, &track.artistCredit.artistCount); err != nil {
+            log.Printf("No artist_credit with id %d", track.artistCreditId)
+        }
+        // Get artist credit names from database using artistCreditId
+        rows, err = server.db.Query("SELECT * FROM artist_credit_name WHERE artist_credit = ?", track.artistCreditId)
+        if err != nil {
+            log.Printf("No artist_credit_name with artist_credit %d", track.artistCreditId)
+        }
+        for rows.Next() {
+            artistCreditName := ArtistCreditName{}
+            if err := rows.Scan(&artistCreditName.artistCreditId, &artistCreditName.position, &artistCreditName.artistId, &artistCreditName.name); err != nil {
+                log.Printf("Error scanning artist_credit_name")
+            }
+            track.artistCredit.artistCreditNames = append(track.artistCredit.artistCreditNames, artistCreditName)
+        }
+        // Get mbid for artist credit names
+        query = "SELECT mbid FROM artist WHERE id = ?"
+        for i, artistCreditName := range track.artistCredit.artistCreditNames {
+            row := server.db.QueryRow(query, artistCreditName.artistId)
+            if err := row.Scan(&track.artistCredit.artistCreditNames[i].artistMbid); err != nil {
+                log.Printf("No artist with id %d", artistCreditName.artistId)
+            }
+        }
+        html := server.generateTrackJSON(track)
         fmt.Fprint(w, html)
     }
 }

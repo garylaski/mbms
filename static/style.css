@@ -48,6 +48,10 @@ a:hover {
     grid-template-columns: 30% 70%;
     margin-bottom: 2em;
 }
+#seek-slider {
+    min-width: 30em;
+    position: relative;
+}
 #release-cover {
     max-width: 100%;
     grid-column: 1;
@@ -78,11 +82,57 @@ nav a {
 #player {
     display: flex;
     align-items: center;
+    flex-direction: row;
     height: 3em;
     background-color: #2d2d2d;
     position: fixed;
     width: 100vw;
     bottom: 0px;
+}
+#controls {
+    margin: auto;
+    min-width: 60em;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+#track-data {
+    display: flex;
+    flex-direction: column;
+    min-width: 20em;
+    margin-right: 3em;
+}
+#settings {
+    margin-left: 3em;
+    min-width: 20em;
+    display: flex;
+    flex-direction: column;
+}
+#time {
+    display: flex; 
+    flex-direction: row;
+    left: 8em;
+}
+#play:before {
+    content: "▶";
+}
+#pause:before {
+    content: "❚❚";
+}
+#next:before {
+    content: "⏭";
+}
+#prev:before {
+    content: "⏮";
+}
+#player-length:before {
+    content: "/";
+}
+#seek-slider {
+    width: 100%;
+    margin: 0;
 }
 .small-release-img {
     width: 100%;

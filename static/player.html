@@ -1,14 +1,23 @@
 <div id="player">
-    <audio id="audio" controls>
+    <audio id="audio">
         <source src="">
     </audio>
-    <button id="prev"></button>
-    <button id="play"></button>
-    <button id="next"></button>
-    <span id="player-name"></span>
-    <span id="player-artist-credit"></span>
-    <span id="player-release"></span>
-    <input type="range" id="seek-slider" max="100" value="0">
-    <span id="player-length">0:00</span>
-    <span id="player-current-length">0:00</span>
+    <div id="settings">
+    </div>
+    <div id="controls">
+        <div id="buttons">
+            <button id="prev" onclick="prev_track()"></button>
+            <button id="play" onclick="toggle()"></button>
+            <button id="next" onclick="next_track()"></button>
+        </div>
+        <div id="time">
+            <input type="range" id="seek-slider" max="100" value="0">
+            <span id="player-current-length">0:00</span>
+            <span id="player-length">0:00</span>
+        </div>
+    </div>
+    <div id="track-data">
+        <span id="player-name"></span>
+        <span id="player-artist-credit"></span>
+    </div>
 </div>
