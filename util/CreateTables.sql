@@ -1,6 +1,7 @@
 CREATE TABLE artist (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     mbid                VARCHAR(36) NOT NULL,
+    name                VARCHAR,
     unique (mbid)
 );
 
@@ -24,7 +25,7 @@ CREATE TABLE track (
     mbid                VARCHAR(36) NOT NULL,
     name                VARCHAR NOT NULL,
     number              INTEGER NOT NULL,
-    artist_credit       VARCHAR NOT NULL,
+    artist_credit       INTEGER NOT NULL,
     length              INTEGER NOT NULL,
     release             INTEGER NOT NULL,
     url                 VARCHAR,

@@ -1,5 +1,7 @@
 package main
 import (
+    "io"
+    "encoding/json"
     "os"
     "database/sql"
     "fmt"
@@ -15,6 +17,7 @@ type Artist struct {
     id int
     mbid string
     releases []Release
+    name string
 }
 type ArtistCredit struct {
     id int
@@ -64,6 +67,31 @@ type Server struct {
     allReleaseHTML []byte
     allTrackHTML []byte
     allArtistHTML []byte
+}
+func (server Server) getNamesFromMBID(mbid string) string {
+    url := "https://musicbrainz.org/ws/2/artist/" + mbid + "?fmt=json"
+    resp, err := http.Get(url)
+    if err != nil {
+        log.Fatal(err)
+    }
+    // get name from json
+    var res map[string]interface{}
+    restr, err := io.ReadAll(resp.Body)
+    if err != nil {
+        log.Fatal(err)
+    }
+    json.Unmarshal([]byte(restr), &res)
+    name := res["name"]
+    // store in sqlite
+    server.db.Exec("UPDATE artist SET name = ? WHERE mbid = ?", name, mbid)
+    //convert name to string
+    return name.(string)
+}
+func convertMsToTime(ms int) string {
+    sec := ms / 1000
+    min := sec / 60
+    sec = sec % 60
+    return fmt.Sprintf("%d:%02d", min, sec)
 }
 func (server Server) generateAllTrackHTML() string {
     html := string(server.allTrackHTML)
@@ -121,7 +149,10 @@ func (server Server) generateArtistHTML(artist Artist) string {
     html := string(server.artistHTML)
     html = strings.Replace(html, "{{nav}}", string(server.navHTML), -1)
     html = strings.Replace(html, "{{player}}", string(server.playerHTML), -1)
-    html = strings.Replace(html, "{{artist.name}}", artist.mbid, -1)
+    if (artist.name == "") {
+        artist.name = server.getNamesFromMBID(artist.mbid)
+    }
+    html = strings.Replace(html, "{{artist.name}}", artist.name, -1)
     var releasesHTML = ""
     for _, release := range artist.releases {
         releasesHTML += server.generateSmallReleaseHTML(release)
@@ -146,7 +177,7 @@ func (server Server) generateSmallTrackHTML(track Track) string {
     html = strings.Replace(html, "{{track.name}}", track.name, -1)
     html = strings.Replace(html, "{{track.mbid}}", track.mbid, -1)
     html = strings.Replace(html, "{{track.number}}", strconv.Itoa(track.number), -1)
-    html = strings.Replace(html, "{{track.length}}", strconv.Itoa(track.length), -1)
+    html = strings.Replace(html, "{{track.length}}", convertMsToTime(track.length), -1)
     html = strings.Replace(html, "{{track.url}}", url.PathEscape(track.url), -1)
     artistCreditHTML := server.generateArtistCreditHTML(track.artistCredit)
     html = strings.Replace(html, "{{track.artistCredit}}", artistCreditHTML, -1)
@@ -162,7 +193,10 @@ func artistHandler(w http.ResponseWriter, r *http.Request, server Server) {
         query := "SELECT * FROM artist WHERE mbid = ?"
         rows, err := server.db.Query(query, mbid)
         for rows.Next() {
-            err = rows.Scan(&artist.id, &artist.mbid)
+            err = rows.Scan(&artist.id, &artist.mbid, &artist.name)
+        }
+        if err != nil {
+            fmt.Println(err)
         }
         query = "SELECT * FROM artist_credit WHERE id IN (SELECT artist_credit FROM artist_credit_name WHERE artist = ?)"
         rows, err = server.db.Query(query, artist.id)
@@ -430,6 +464,10 @@ func main() {
     })
     http.HandleFunc("/track/", func(w http.ResponseWriter, r *http.Request) {
         trackHandler(w, r, server)
+    })
+    http.HandleFunc("/write/", func(w http.ResponseWriter, r *http.Request) {
+        mbid := r.URL.Path[len("/write/"):]
+        server.getNamesFromMBID(mbid)
     })
     mediaFileServer := http.FileServer(http.Dir("/"))
     mediaHandler := http.StripPrefix("/media/", mediaFileServer)

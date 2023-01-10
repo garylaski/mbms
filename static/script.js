@@ -55,6 +55,7 @@ function set_player(track) {
     document.getElementById("player-name").innerHTML = track.name;
     document.getElementById("player-length").innerHTML = new Date(track.length).toISOString().slice(14, 19);
     document.getElementById("player-artist-credit").innerHTML = track.artistCredit;
+    document.getElementById("seek-slider").max = track.length;
 }
 function next_track() {
     current_track++;
@@ -104,7 +105,7 @@ function update_player_time() {
     let seek_slider = document.getElementById("seek-slider");
     current_time = new Date(audio.currentTime*1000).toISOString().slice(14, 19);
     player_current_time.innerHTML = current_time;
-    seek_slider.value = audio.currentTime;
+    seek_slider.value = audio.currentTime*1000;
 }
 
 // After document loads add event listener to audio element
