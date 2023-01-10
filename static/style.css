@@ -80,6 +80,9 @@ nav {
 nav a {
     margin: 1em;
 }
+nav form {
+    margin: 1em;
+}
 #player {
     display: flex;
     align-items: center;
