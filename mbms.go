@@ -168,6 +168,10 @@ func (server Server) generateTrackHTML(track Track) string {
 	html := string(server.trackHTML)
 	return html
 }
+func (server Server) generateArtistCreditNameHTML (artistCreditName ArtistCreditName) string {
+    html := "<li><a href='/artist/" + artistCreditName.artistMbid + "'>" + artistCreditName.name + "</a></li>"
+    return html
+}
 func (server Server) generateArtistCreditHTML(artistCredit ArtistCredit) string {
 	artistCreditNameHTML := artistCredit.name
 	for _, artistCreditName := range artistCredit.artistCreditNames {
@@ -175,7 +179,7 @@ func (server Server) generateArtistCreditHTML(artistCredit ArtistCredit) string 
 	}
 	return artistCreditNameHTML
 }
-func (server Server) generateSearchHTML(releases []Release) string {
+func (server Server) generateSearchHTML(releases []Release, tracks []Track, artistCreditNames []ArtistCreditName) string {
     html := string(server.searchHTML)
     html = strings.Replace(html, "{{nav}}", string(server.navHTML), -1)
     html = strings.Replace(html, "{{player}}", string(server.playerHTML), -1)
@@ -184,6 +188,16 @@ func (server Server) generateSearchHTML(releases []Release) string {
         releasesHTML += server.generateSmallReleaseHTML(release)
     }
     html = strings.Replace(html, "{{releases}}", releasesHTML, -1)
+    var tracksHTML = ""
+    for _, track := range tracks {
+        tracksHTML += server.generateSmallTrackHTML(track)
+    }
+    html = strings.Replace(html, "{{tracks}}", tracksHTML, -1)
+    var artistCreditNamesHTML = ""
+    for _, artistCreditName := range artistCreditNames {
+        artistCreditNamesHTML += server.generateArtistCreditNameHTML(artistCreditName)
+    }
+    html = strings.Replace(html, "{{artistCreditNames}}", artistCreditNamesHTML, -1)
     return html
 }
 func (server Server) generateSmallTrackHTML(track Track) string {
@@ -420,24 +434,23 @@ func releaseHandler(w http.ResponseWriter, r *http.Request, server Server) {
 	}
 }
 func searchHandler(w http.ResponseWriter, r *http.Request, server Server) {
-    query := r.URL.Query().Get("q")
+    searchQuery := r.URL.Query().Get("q")
         // Get releases from database using query
-        rows, err := server.db.Query("SELECT * FROM release WHERE name LIKE ?", "%"+query+"%")
+        rows, err := server.db.Query("SELECT * FROM release WHERE name LIKE ?", "%"+searchQuery+"%")
         if err != nil {
-            log.Printf("No releases with name %s", query)
+            log.Printf("No releases with name %s", searchQuery)
         }
         releases := []Release{}
         for rows.Next() {
             release := Release{}
             if err := rows.Scan(&release.id, &release.mbid, &release.name, &release.artistCreditId, &release.date, &release._type, &release.coverUrl); err != nil {
-                log.Printf("Error scanning release for query %s", query)
+                log.Printf("Error scanning release for query %s", searchQuery)
             }
             releases = append(releases, release)
         }
         // Get artist credits for each release using artistCreditId
         for i, release := range releases {
-            query = "SELECT * FROM artist_credit WHERE id = ?"
-            row := server.db.QueryRow(query, release.artistCreditId)
+            row := server.db.QueryRow("SELECT * FROM artist_credit WHERE id = ?", release.artistCreditId)
             if err := row.Scan(&releases[i].artistCredit.id, &releases[i].artistCredit.name, &releases[i].artistCredit.artistCount); err != nil {
                 log.Printf("No artist credit with id %d", release.artistCreditId)
             }
@@ -454,16 +467,69 @@ func searchHandler(w http.ResponseWriter, r *http.Request, server Server) {
                 releases[i].artistCredit.artistCreditNames = append(releases[i].artistCredit.artistCreditNames, artistCreditName)
             }
             // Get mbid for artist credit names
-            query = "SELECT mbid FROM artist WHERE id = ?"
             for j, artistCreditName := range releases[i].artistCredit.artistCreditNames {
-                row := server.db.QueryRow(query, artistCreditName.artistId)
+                row := server.db.QueryRow("SELECT mbid FROM artist WHERE id = ?", artistCreditName.artistId)
                 if err := row.Scan(&releases[i].artistCredit.artistCreditNames[j].artistMbid); err != nil {
                     log.Printf("No artist with id %d", artistCreditName.artistId)
                 }
             }
         }
+        // Get tracks from database using query
+        rows, err = server.db.Query("SELECT * FROM track WHERE name LIKE ?", "%"+searchQuery+"%")
+        if err != nil {
+            log.Printf("No tracks with name %s", searchQuery)
+        }
+        tracks := []Track{}
+        for rows.Next() {
+            track := Track{}
+            if err := rows.Scan(&track.id, &track.mbid, &track.name, &track.number, &track.artistCreditId, &track.length, &track.release, &track.url); err != nil {
+                log.Printf("Error scanning track for query %s", searchQuery)
+            }
+            tracks = append(tracks, track)
+        }
+        // Get artist credits for tracks
+        for i, track := range tracks {
+            row := server.db.QueryRow("SELECT * FROM artist_credit WHERE id = ?", track.artistCreditId)
+            if err := row.Scan(&tracks[i].artistCredit.id, &tracks[i].artistCredit.name, &tracks[i].artistCredit.artistCount); err != nil {
+                log.Printf("No artist credit with id %d", track.artistCreditId)
+            }
+            // Get artist credit names from database using artistCreditId
+            rows, err := server.db.Query("SELECT * FROM artist_credit_name WHERE artist_credit = ?", track.artistCreditId)
+            if err != nil {
+                log.Printf("No artist_credit_name with artist_credit %d", track.artistCreditId)
+            }
+            for rows.Next() {
+                artistCreditName := ArtistCreditName{}
+                if err := rows.Scan(&artistCreditName.artistCreditId, &artistCreditName.position, &artistCreditName.artistId, &artistCreditName.name); err != nil {
+                    log.Printf("Error scanning artist_credit_name")
+                }
+                tracks[i].artistCredit.artistCreditNames = append(tracks[i].artistCredit.artistCreditNames, artistCreditName)
+            }
+        }
+        // Get artists_credit_names from database using query
+        rows, err = server.db.Query("SELECT * FROM artist_credit_name WHERE name LIKE ? GROUP BY name", "%"+searchQuery+"%" )
+        if err != nil {
+            log.Printf("No artist_credit_name with name %s", searchQuery)
+        }
+        artistCreditNames := []ArtistCreditName{}
+        for rows.Next() {
+            artistCreditName := ArtistCreditName{}
+            if err := rows.Scan(&artistCreditName.artistCreditId, &artistCreditName.position, &artistCreditName.artistId, &artistCreditName.name); err != nil {
+                log.Printf("Error scanning artist_credit_name for query %s", searchQuery)
+            }
+            // Get artist credit name mbid
+            artistCreditNames = append(artistCreditNames, artistCreditName)
+        }
+        // Get artistMbid for artist credit names
+        for i, artistCreditName := range artistCreditNames {
+            row := server.db.QueryRow("SELECT mbid FROM artist WHERE id = ?", artistCreditName.artistId)
+            if err := row.Scan(&artistCreditNames[i].artistMbid); err != nil {
+                log.Printf("No artist with id %d", artistCreditName.artistId)
+            }
+        }
+
         // Generate HTML
-        html := server.generateSearchHTML(releases)
+        html := server.generateSearchHTML(releases, tracks, artistCreditNames)
         fmt.Fprint(w, html)
 }
 func main() {

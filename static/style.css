@@ -151,7 +151,7 @@ nav form {
     display: flex;
     flex-direction: column;
 }
-#artist-releases {
+#artist-releases, #search-releases {
     display: flex;
     flex-wrap: wrap;
     column-gap: 1em;
