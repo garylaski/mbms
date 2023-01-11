@@ -55,6 +55,7 @@ type Track struct {
 	length         int
 	release        int
 	url            string
+    releaseCoverUrl string
 }
 type Server struct {
 	db               *sql.DB
@@ -169,7 +170,7 @@ func (server Server) generateTrackHTML(track Track) string {
 	return html
 }
 func (server Server) generateArtistCreditNameHTML (artistCreditName ArtistCreditName) string {
-    html := "<li><a href='/artist/" + artistCreditName.artistMbid + "'>" + artistCreditName.name + "</a></li>"
+    html := "<li><a href='/artist/" + artistCreditName.artistMbid + "' onclick=\"ajax('/artist/" + artistCreditName.artistMbid + "'); return false;\">" + artistCreditName.name + "</a></li>"
     return html
 }
 func (server Server) generateArtistCreditHTML(artistCredit ArtistCredit) string {
@@ -294,6 +295,7 @@ func (server Server) generateTrackJSON(track Track) string {
 	json += fmt.Sprintf("\"length\": %d,", track.length)
 	json += fmt.Sprintf("\"url\": \"%s\",", url.PathEscape(track.url))
 	json += fmt.Sprintf("\"mbid\": \"%s\",", track.mbid)
+	json += fmt.Sprintf("\"releaseCoverUrl\": \"%s\",", track.releaseCoverUrl)
 	artistCreditHTML := server.generateArtistCreditHTML(track.artistCredit)
 	//replace " with \"
 	artistCreditHTML = strings.Replace(artistCreditHTML, "\"", "\\\"", -1)
@@ -341,6 +343,12 @@ func trackHandler(w http.ResponseWriter, r *http.Request, server Server) {
 				log.Printf("No artist with id %d", artistCreditName.artistId)
 			}
 		}
+        // Get release cover url
+        query = "SELECT cover_url FROM release WHERE id = ?"
+        row = server.db.QueryRow(query, track.release)
+        if err := row.Scan(&track.releaseCoverUrl); err != nil {
+            log.Printf("No release with id %d", track.release)
+        }
 		html := server.generateTrackJSON(track)
 		fmt.Fprint(w, html)
 	}

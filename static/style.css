@@ -88,6 +88,7 @@ nav form {
     align-items: center;
     flex-direction: row;
     height: 3em;
+    padding: 0.25em;
     background-color: #2d2d2d;
     position: fixed;
     width: 100vw;
@@ -104,9 +105,19 @@ nav form {
 
 #track-data {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     min-width: 20em;
     margin-right: 3em;
+    gap: 0.5em;
+    align-items: center;
+}
+#track-data-text {
+    width: 10em;
+    display: flex;
+    flex-direction: column;
+}
+#track-cover {
+    height: 3em;
 }
 #settings {
     margin-left: 3em;
@@ -115,6 +126,7 @@ nav form {
     flex-direction: column;
 }
 #time {
+    gap: 0.25em;
     display: flex; 
     flex-direction: row;
     left: 8em;
@@ -131,12 +143,12 @@ nav form {
 #prev:before {
     content: "⏮";
 }
-#player-length:before {
-    content: "/";
-}
 #seek-slider {
     width: 100%;
     margin: 0;
+}
+#track-love:before {
+    content: "❤";
 }
 .small-release-img {
     width: 100%;

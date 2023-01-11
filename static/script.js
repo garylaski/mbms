@@ -55,6 +55,7 @@ function set_player(track) {
     document.getElementById("player-name").innerHTML = track.name;
     document.getElementById("player-length").innerHTML = new Date(track.length).toISOString().slice(14, 19);
     document.getElementById("player-artist-credit").innerHTML = track.artistCredit;
+    document.getElementById("track-cover").src = "/media/" + track.releaseCoverUrl;
     document.getElementById("seek-slider").max = track.length;
 }
 function next_track() {
