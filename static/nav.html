@@ -2,7 +2,8 @@
     <a href="../../artist/all">Artists</a> |
     <a href="../../release/all">Releases</a> |
     <a href="../../track/all">Tracks</a> |
-    <form action="../../search" method="get">
-        <input type="text" name="search" placeholder="search"/>
+    <form onsubmit="ajax('../../search?q='+q.value); return false;" method="post">
+        <input type="text" name="q" placeholder="search"/>
+        <input type="submit" value="Search"/>
     </form>
 </nav>
