@@ -2,6 +2,18 @@ let playlist = [];
 let current_track = 0;
 function add_track(mbid) {
     playlist.push(mbidToJSONTrack(mbid));
+    let url = "../../playlist/add/" + mbid;
+    let request = new XMLHttpRequest();
+    request.open("GET", url, false);
+    request.send(null);
+}
+function toggle_playlist() {
+    pl = document.getElementById("playlist");
+    if (pl.style.display === "none") {
+        pl.style.display = "flex";
+    } else {
+        pl.style.display = "none";
+    }
 }
 function toggle() {
     audio = document.getElementById("audio");

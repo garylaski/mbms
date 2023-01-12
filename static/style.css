@@ -69,6 +69,7 @@ a:hover {
 #content {
     width: 90%;
     margin: 1em auto;
+    margin-bottom: 3em;
 }
 
 nav {
@@ -93,6 +94,7 @@ nav form {
     position: fixed;
     width: 100vw;
     bottom: 0px;
+    z-index: 2;
 }
 #controls {
     margin: auto;
@@ -106,15 +108,32 @@ nav form {
 #track-data {
     display: flex;
     flex-direction: row;
-    min-width: 20em;
+    width: 20em;
     margin-right: 3em;
     gap: 0.5em;
     align-items: center;
 }
+#playlist {
+    position: fixed;
+    background-color: #3d3d3d;
+    height: 100vh;
+    top: 0;
+    right: 0;
+    flex-direction: row;
+    width: 20em;
+    padding-right: 2em;
+    padding-left: 0.25em;
+    z-index: 0;
+}
 #track-data-text {
-    width: 10em;
+    width: 15em;
     display: flex;
     flex-direction: column;
+}
+#player-name, #player-artist-credit, .small-release {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 #track-cover {
     height: 3em;
@@ -131,8 +150,11 @@ nav form {
     flex-direction: row;
     left: 8em;
 }
-#play:before {
+#play:before, .play:before {
     content: "▶";
+}
+.queue:before {
+    content: "➕";
 }
 #pause:before {
     content: "❚❚";
@@ -142,6 +164,9 @@ nav form {
 }
 #prev:before {
     content: "⏮";
+}
+#playlist-toggle:before {
+    content: "📄";
 }
 #seek-slider {
     width: 100%;
@@ -153,17 +178,15 @@ nav form {
 .small-release-img {
     width: 100%;
 }
-.small-release-name {
-    width: 100%;
-    overflow: hidden;
-    text-overflow: clip;
-}
 .small-release {
     width: 15vw;
     display: flex;
     flex-direction: column;
 }
-#artist-releases, #search-releases {
+.small-release * {
+    margin-right: auto;
+}
+#artist-releases, #search-releases, #artist-appearances-list {
     display: flex;
     flex-wrap: wrap;
     column-gap: 1em;
