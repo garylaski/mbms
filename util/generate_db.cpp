@@ -1,252 +1,165 @@
 #include <taglib/tag.h>
 #include <taglib/fileref.h>
+#include <taglib/tfilestream.h>
 #include <taglib/tpropertymap.h>
 #include <sqlite3.h>
 #include <stdio.h>
 #include <fstream>
 #include <string>
 #include <filesystem>
-
-std::string audio_ext = "mp3flacggwmaaacopuswavm4a";
-struct artist_credit_name {
-    int artist_credit;
-    int position;
-    int artist;
-    std::string name;
-};
-struct track {
-    int id;
-    std::string mbid;
-    std::string name;
-    int number;
-    int artist_credit;
-    int length;
-    int release;
-    std::string url;
-};
-struct release {
-    int id;
-    std::string mbid;
-    std::string name;
-    int artist_credit;
-    int date;
-    int type;
-    std::string cover_url;
-};
-
-int get_artist_id(sqlite3 *db, std::string artist_mbid) {
-    std::string query = "SELECT id FROM artist WHERE mbid = '" + artist_mbid + "'";
+#include <map>
+#include <string>
+using namespace std;
+struct {
+    map<TagLib::String, int> artists;
+    map<TagLib::String, int> releases;
+    map<TagLib::String, int> artist_credits;
+    map<TagLib::String, int> types;
+} cache;
+string audio_ext = "flacaacmp3opusm4a";
+sqlite3 *db;
+char* date = "0000-00-00";
+int addTrack(TagLib::PropertyMap tags, int artist_credit_id, int length, int release_id, const char* url) {
+    const char* query = "INSERT INTO track (mbid, name, number, artist_credit, length, release, url) VALUES (?, ?, ?, ?, ?, ?, ?)";
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, tags["MUSICBRAINZ_TRACKID"][0].toCString(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, tags["TITLE"][0].toCString(true), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 3, tags["TRACKNUMBER"][0].toInt());
+    sqlite3_bind_int(stmt, 4, artist_credit_id);
+    sqlite3_bind_int(stmt, 5, length);
+    sqlite3_bind_int(stmt, 6, release_id);
+    sqlite3_bind_text(stmt, 7, url, -1, SQLITE_STATIC);
     sqlite3_step(stmt);
-    int artist_id = sqlite3_column_int(stmt, 0);
-    return artist_id;
+    return sqlite3_last_insert_rowid(db);
 }
-
-int add_artist(sqlite3 *db, std::string artist_mbid) {
-    int artist_id = get_artist_id(db, artist_mbid);
-    if (artist_id != 0) {
-        return artist_id;
-    }
-    std::string query = "INSERT INTO artist (mbid) VALUES (?)";
+int addArtist(TagLib::String mbid) {
+    const char* query = "INSERT INTO artist (mbid) VALUES (?)";
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_bind_text(stmt, 1, artist_mbid.c_str(), -1, SQLITE_STATIC);
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, mbid.toCString(), -1, SQLITE_STATIC);
     sqlite3_step(stmt);
-    artist_id = sqlite3_last_insert_rowid(db);
-    return artist_id;
+    return sqlite3_last_insert_rowid(db);
 }
-int get_artist_credit_id(sqlite3 *db, std::string artist_credit, int artist_count) {
-    std::string query = "SELECT id FROM artist_credit WHERE name = '" + artist_credit + "' AND artist_count = " + std::to_string(artist_count);
+void addArtistCreditName(int artist_credit_id, int position, int artist_id, TagLib::String name) {
+    const char* query = "INSERT INTO artist_credit_name (artist_credit, position, artist, name) VALUES (?, ?, ?, ?)";
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_int(stmt, 1, artist_credit_id);
+    sqlite3_bind_int(stmt, 2, position);
+    sqlite3_bind_int(stmt, 3, artist_id);
+    sqlite3_bind_text(stmt, 4, name.toCString(true), -1, SQLITE_STATIC);
     sqlite3_step(stmt);
-    int artist_credit_id = sqlite3_column_int(stmt, 0);
-    return artist_credit_id;
 }
-
-int add_artist_credit(sqlite3 *db, std::string artist_credit, int artist_count) {
-    int artist_credit_id = get_artist_credit_id(db, artist_credit, artist_count);
-    if (artist_credit_id != 0) {
-        return artist_credit_id;
-    }
-    std::string query = "INSERT INTO artist_credit (name, artist_count) VALUES (?, ?)";
+int addArtistCredit(TagLib::String artist_credit, TagLib::StringList artist_credit_names, TagLib::StringList artist_mbids) {
+    int artist_count = artist_credit_names.size();
+    const char* query = "INSERT INTO artist_credit (name, artist_count) VALUES (?, ?)";
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_bind_text(stmt, 1, artist_credit.c_str(), -1, SQLITE_STATIC);
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, artist_credit.toCString(true), -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, 2, artist_count);
     sqlite3_step(stmt);
-    artist_credit_id = sqlite3_last_insert_rowid(db);
+    int artist_credit_id = sqlite3_last_insert_rowid(db);
+    for (int i = 0; i < artist_count; i++) {
+        int artist_id;
+        TagLib::String artist_mbid = artist_mbids[i];
+        if ((artist_id = cache.artists[artist_mbid]) == 0) {
+            artist_id = addArtist(artist_mbid);
+            cache.artists[artist_mbid] = artist_id;
+        }
+        addArtistCreditName(artist_credit_id, i, artist_id, artist_credit_names[i]);
+    }
     return artist_credit_id;
 }
-
-
-int get_artist_credit_name_id(sqlite3 *db, int artist_credit, int position, int artist, std::string name) {
-    std::string query = "SELECT id FROM artist_credit_name WHERE artist_credit = " + std::to_string(artist_credit) + " AND position = " + std::to_string(position) + " AND artist = " + std::to_string(artist) + " AND name = '" + name + "'";
+int addType(TagLib::String type) {
+    const char* query = "INSERT INTO type (name) VALUES (?)";
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, type.toCString(true), -1, SQLITE_STATIC);
     sqlite3_step(stmt);
-    int artist_credit_name_id = sqlite3_column_int(stmt, 0);
-    return artist_credit_name_id;
+    return sqlite3_last_insert_rowid(db);
 }
-int add_artist_credit_name(sqlite3 *db, artist_credit_name acn) {
-    int artist_credit_name_id = get_artist_credit_name_id(db, acn.artist_credit, acn.position, acn.artist, acn.name);
-    if (artist_credit_name_id != 0) {
-        return artist_credit_name_id;
+int addRelease(TagLib::PropertyMap tags, TagLib::String release_mbid, const char* cover_url) {
+    int album_artist_credit_id, type_id;
+    TagLib::String album_artist_credit = tags["ALBUMARTIST"][0];
+    if ((album_artist_credit_id = cache.artist_credits[album_artist_credit]) == 0){
+        album_artist_credit_id = addArtistCredit(album_artist_credit, tags["ALBUMARTISTS"], tags["MUSICBRAINZ_ALBUMARTISTID"]);
+        cache.artist_credits[album_artist_credit] = album_artist_credit_id;
     }
-    std::string query = "INSERT INTO artist_credit_name (artist_credit, position, artist, name) VALUES (?, ?, ?, ?)";
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_bind_int(stmt, 1, acn.artist_credit);
-    sqlite3_bind_int(stmt, 2, acn.position);
-    sqlite3_bind_int(stmt, 3, acn.artist);
-    sqlite3_bind_text(stmt, 4, acn.name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_step(stmt);
-    artist_credit_name_id = sqlite3_last_insert_rowid(db);
-    return artist_credit_name_id;
-}
-int get_type_id(sqlite3 *db, std::string type) {
-    std::string query = "SELECT id FROM release_group_primary_type WHERE name = '" + type + "'";
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_step(stmt);
-    int type_id = sqlite3_column_int(stmt, 0);
-    return type_id;
-}
-int add_type(sqlite3 *db, std::string type) {
-    int type_id = get_type_id(db, type);
-    if (type_id != 0) {
-        return type_id;
+    TagLib::String type = tags["RELEASETYPE"][0];
+    if ((type_id = cache.types[type]) == 0) {
+        type_id = addType(type);
+        cache.types[type] = type_id;
     }
-    std::string query = "INSERT INTO type (name) VALUES (?)";
+    const char* query = "INSERT INTO release (mbid, name, artist_credit, date, type, cover_url) VALUES (?, ?, ?, ?, ?, ?)";
     sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_bind_text(stmt, 1, type.c_str(), -1, SQLITE_STATIC);
-    sqlite3_step(stmt);
-    type_id = sqlite3_last_insert_rowid(db);
-    return type_id;
-}
-int get_release_id(sqlite3 *db, std::string release_mbid) {
-    std::string query = "SELECT id FROM release WHERE mbid = '" + release_mbid + "'";
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_step(stmt);
-    int release_id = sqlite3_column_int(stmt, 0);
-    return release_id;
-}
-int add_release(sqlite3 *db, release r) {
-    int release_id = get_release_id(db, r.mbid);
-    if (release_id != 0) {
-        return release_id;
-    }
-    std::string query = "INSERT INTO release (mbid, name, artist_credit, date, type, cover_url) VALUES (?, ?, ?, ?, ?, ?)";
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_bind_text(stmt, 1, r.mbid.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, r.name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 3, r.artist_credit);
-    sqlite3_bind_int(stmt, 4, r.date);
-    sqlite3_bind_int(stmt, 5, r.type);
-    sqlite3_bind_text(stmt, 6, r.cover_url.c_str(), -1, SQLITE_STATIC);
-    sqlite3_step(stmt);
-    release_id = sqlite3_last_insert_rowid(db);
-    return release_id;
-}
-int add_track(sqlite3 *db, track t) {
-    std::string query = "INSERT INTO track (mbid, name, number, artist_credit, length, release, url) VALUES (?, ?, ?, ?, ?, ?, ?)";
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL);
-    sqlite3_bind_text(stmt, 1, t.mbid.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 2, t.name.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(stmt, 3, t.number);
-    sqlite3_bind_int(stmt, 4, t.artist_credit);
-    sqlite3_bind_int(stmt, 5, t.length);
-    sqlite3_bind_int(stmt, 6, t.release);
-    sqlite3_bind_text(stmt, 7, t.url.c_str(), -1, SQLITE_STATIC);
-    sqlite3_step(stmt);
-    int track_id = sqlite3_last_insert_rowid(db);
-    return track_id;
-}
-
-void processAudio(std::filesystem::path path, sqlite3 *db)
-{
-    const char *filename = path.c_str();
-    TagLib::FileRef f(filename);
-    TagLib::PropertyMap tags = f.file()->properties();
-    int artist_count = tags["ARTISTS"].size();
-    std::string artist_credit = tags["ARTIST"][0].to8Bit(true);
-    int artist_credit_id = add_artist_credit(db, artist_credit, artist_count);
-    artist_credit_name artist_credit_names[artist_count];
-    for (int i = 0; i < artist_count; i++) {
-        artist_credit_names[i].artist = add_artist(db, tags["MUSICBRAINZ_ARTISTID"][i].to8Bit(true));
-        artist_credit_names[i].artist_credit = artist_credit_id;
-        artist_credit_names[i].position = i;
-        artist_credit_names[i].name = tags["ARTISTS"][i].to8Bit(true);
-        add_artist_credit_name(db, artist_credit_names[i]);
-    }
-    int type_id = add_type(db, tags["RELEASETYPE"][0].to8Bit(true));
-    int album_artist_count = tags["ALBUMARTISTS"].size();
-    int album_artist_credit_id = add_artist_credit(db, tags["ALBUMARTIST"][0].to8Bit(true), album_artist_count);
-    artist_credit_name album_artist_credit_names[album_artist_count];
-    for (int i = 0; i < album_artist_count; i++) {
-        album_artist_credit_names[i].artist = add_artist(db, tags["MUSICBRAINZ_ALBUMARTISTID"][i].to8Bit(true));
-        album_artist_credit_names[i].artist_credit = album_artist_credit_id;
-        album_artist_credit_names[i].position = i;
-        album_artist_credit_names[i].name = tags["ALBUMARTISTS"][i].to8Bit(true);
-        add_artist_credit_name(db, album_artist_credit_names[i]);
-    }
-    release r;
-    r.mbid = tags["MUSICBRAINZ_ALBUMID"][0].to8Bit(true);
-    r.name = tags["ALBUM"][0].to8Bit(true);
-    r.artist_credit = album_artist_credit_id;
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, release_mbid.toCString(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, tags["ALBUM"][0].toCString(true), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 3, album_artist_credit_id);
     if (tags["DATE"].size() > 0) {
-        r.date = atoi(tags["DATE"][0].to8Bit(true).c_str());
-    } else {
-        r.date = 0;
+        sqlite3_bind_text(stmt, 4, tags["DATE"][0].toCString(true), -1, SQLITE_STATIC);
+    } else  {
+        sqlite3_bind_text(stmt, 4, date, -1, SQLITE_STATIC);
     }
-    r.type = type_id;
-    std::string filename_str = filename;
-    std::filesystem::path parent_dir = path.parent_path();
-    for (const auto & entry : std::filesystem::directory_iterator(parent_dir)) {
-        std::string entry_filename = entry.path().filename().string();
-        if (entry_filename.find("cover") != std::string::npos) {
-            r.cover_url = entry.path().string();
-            break;
-        }
-    }
-
-
-    int release_id = add_release(db, r);
-    
-    track t;
-    t.mbid = tags["MUSICBRAINZ_TRACKID"][0].to8Bit(true);
-    t.name = tags["TITLE"][0].to8Bit(true);
-    t.number = std::stoi(tags["TRACKNUMBER"][0].to8Bit(true));
-    t.artist_credit = artist_credit_id;
-    t.length = f.audioProperties()->lengthInMilliseconds();
-    t.release = release_id;
-    t.url = filename_str;
-    add_track(db, t);
+    sqlite3_bind_int(stmt, 5, type_id);
+    sqlite3_bind_text(stmt, 6, cover_url, -1, SQLITE_STATIC);
+    sqlite3_step(stmt);
+    return sqlite3_last_insert_rowid(db);
 }
-int main(int argc, char *argv[]) {
-    //Create and open an sqlite database
-    sqlite3 *db;
-    if (sqlite3_open("../mb.db", &db) == SQLITE_OK) {
-    //Setup the database
-        std::ifstream createTables("CreateTables.sql");
-        std::string sql = std::string(std::istreambuf_iterator<char>(createTables), std::istreambuf_iterator<char>());
-        sqlite3_exec(db, sql.c_str(), NULL, NULL, NULL);
-    } else {
-        printf("Error opening database");
-    }
-    std::string path = argv[1];
-    for (const auto & entry : std::filesystem::recursive_directory_iterator(path)) {
+void processFiles(string path) {
+    for (const auto & entry : filesystem::recursive_directory_iterator(path)) {
         if (!is_directory(entry)) {
-            std::string filename = entry.path().filename();
-            if (audio_ext.find(filename.substr(filename.find_last_of(".") + 1)) != std::string::npos) {
-                processAudio(entry.path(), db);
+            string filename = entry.path().string();
+            if (audio_ext.find(filename.substr(filename.find_last_of(".") + 1)) != string::npos) {
+                TagLib::FileStream stream(filename.c_str(), true);
+                TagLib::FileRef f(&stream);
+                TagLib::PropertyMap tags = f.file()->properties();
+                int length = f.audioProperties()->lengthInMilliseconds();
+                int release_id, artist_credit_id;
+                TagLib::String release_mbid = tags["MUSICBRAINZ_ALBUMID"][0];
+                if ((release_id = cache.releases[release_mbid]) == 0) {
+                    string cover_url = entry.path().parent_path().string() + "/cover";
+                    // iterate over common image extensions
+                    if (filesystem::exists(cover_url + ".jpg")) {
+                        cover_url = cover_url + ".jpg";
+                    } else if (filesystem::exists(cover_url + ".jpeg")) {
+                        cover_url = cover_url + ".jpeg";
+                    } else if (filesystem::exists(cover_url + ".png")) {
+                        cover_url = cover_url + ".png";
+                    } else if (filesystem::exists(cover_url + ".gif")) {
+                        cover_url = cover_url + ".gif";
+                    } else if (filesystem::exists(cover_url + ".bmp")) {
+                        cover_url = cover_url + ".bmp";
+                    }
+                    release_id = addRelease(tags, release_mbid, cover_url.c_str());
+                    cache.releases[release_mbid] = release_id;
+                }
+                TagLib::String artist_credit = tags["ARTIST"][0];
+                if ((artist_credit_id = cache.artist_credits[artist_credit]) == 0) {
+                    artist_credit_id = addArtistCredit(artist_credit, tags["ARTISTS"], tags["MUSICBRAINZ_ARTISTID"]);
+                    cache.artist_credits[artist_credit] = artist_credit_id;
+                }
+                addTrack(tags, artist_credit_id, length, release_id, filename.c_str());
             }
         }
     }
+}
+int main(int argc, char *argv[]) {
+    sqlite3 *file;
+    sqlite3_open("../mb.db", &file);
+    if (sqlite3_open(":memory:", &db) == SQLITE_OK) {
+        ifstream createTables("CreateTables.sql");
+        string sql = string(istreambuf_iterator<char>(createTables), istreambuf_iterator<char>());
+        sqlite3_exec(db, sql.c_str(), NULL, NULL, NULL);
+    }
+    string path = "/backup/source";
+    processFiles(path);
+    sqlite3_backup *pBackup = sqlite3_backup_init(file, "main", db, "main");
+    if(pBackup){
+      sqlite3_backup_step(pBackup, -1);
+      sqlite3_backup_finish(pBackup);
+    }
+    //save sqlite db to file
     sqlite3_close(db);
 }

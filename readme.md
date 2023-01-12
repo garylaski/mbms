@@ -1,7 +1,4 @@
-- optimize import program. currently takes about 6 minutes for 1500 files.
-    - go rewrite
 - cache album art
 - add all artists,releases,tracks page
-- add search functionality
 - other sqlite drivers for performance
     - reading parallelism

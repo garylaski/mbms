@@ -1,8 +1,8 @@
 CXX = g++
-CXXFLAGS = -g
+CXXFLAGS = -O3
 LIB = -ltag -lz -lsqlite3
 INC = -I/usr/include/taglib
-all: generate_db.cpp
+all:  generate_db.cpp
 	$(CXX) $(CXXFLAGS) $(LIB) $(INC) generate_db.cpp -o generate_db
 clean:
-	$(RM) main
+	$(RM) generate_db ../mb.db
