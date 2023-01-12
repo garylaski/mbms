@@ -39,7 +39,7 @@ type Release struct {
     mbid           string
     name           string
     artistCreditId int
-    date           int
+    date           string
     _type          int
     coverUrl       string
     tracks         []Track
@@ -127,7 +127,7 @@ func (server Server) generateReleaseHTML(release Release) string {
     html = strings.Replace(html, "{{nav}}", string(server.navHTML), -1)
     html = strings.Replace(html, "{{player}}", string(server.playerHTML), -1)
     html = strings.Replace(html, "{{release.name}}", release.name, -1)
-    html = strings.Replace(html, "{{release.date}}", strconv.Itoa(release.date), -1)
+    html = strings.Replace(html, "{{release.date}}", release.date, -1)
     html = strings.Replace(html, "{{release.coverUrl}}", url.PathEscape(release.coverUrl), -1)
     html = strings.Replace(html, "{{release.artistCredit}}", server.generateArtistCreditHTML(release.artistCredit), -1)
     trackHTML := ""
@@ -145,7 +145,7 @@ func (server Server) generateSmallReleaseHTML(release Release) string {
     html := string(server.smallReleaseHTML)
     html = strings.Replace(html, "{{release.name}}", release.name, -1)
     html = strings.Replace(html, "{{release.mbid}}", release.mbid, -1)
-    html = strings.Replace(html, "{{release.date}}", strconv.Itoa(release.date), -1)
+    html = strings.Replace(html, "{{release.date}}", release.date, -1)
     html = strings.Replace(html, "{{release.coverUrl}}", url.PathEscape(release.coverUrl), -1)
     html = strings.Replace(html, "{{release.artistCredit}}", server.generateArtistCreditHTML(release.artistCredit), -1)
     return html
@@ -354,7 +354,7 @@ func releaseHandler(w http.ResponseWriter, r *http.Request, server Server) {
         for rows.Next() {
             track := Track{}
             if err := rows.Scan(&track.id, &track.mbid, &track.name, &track.number, &track.artistCreditId, &track.length, &track.release, &track.url); err != nil {
-                log.Printf("Error scanning track for release %d", release.mbid)
+                log.Printf("Error scanning track for release %s", release.mbid)
             }
             release.tracks = append(release.tracks, track)
         }

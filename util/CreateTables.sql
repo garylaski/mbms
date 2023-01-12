@@ -37,7 +37,7 @@ CREATE TABLE release (
     mbid                VARCHAR(36) NOT NULL,
     name                VARCHAR NOT NULL,
     artist_credit       INTEGER NOT NULL,
-    date                INTEGER NOT NULL,
+    date                VARCHAR,
     type                INTEGER NOT NULL,
     cover_url           VARCHAR,
     unique (mbid)
