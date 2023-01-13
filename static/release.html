@@ -1,29 +1,17 @@
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-        <title>{{release.name}}</title>
-        <script src="/static/script.js"></script>
-        <link rel="stylesheet" href="/static/style.css" />
-    </head>
-    <body>
-        {{nav}}
-        <div id="content">
-            <div id="release-content">
-                <img id="release-cover" src="/media/{{release.coverUrl}}"/>
-                <div id="release-info">
-                    <h1 id="release-name">{{release.name}}</h1>
-                    <h2 id="release-artist-credit">{{release.artistCredit}}</h2>
-                    <h3 id="release-date">{{release.date}}</h3>
-                    <div class="release-controls">
-                        <button class="play" onclick="play_tracks({{release.tracks.mbid}})"></button>
-                        <button class="queue" onclick="add_tracks({{release.tracks.mbid}})"></button>
-                    </div>
-                </div>
-                <ul id="release-tracks">
-                    {{release.tracks}}
-                </ul>
+<div id="content">
+    <div id="release-content">
+        <img id="release-cover" src="/media/{{release.coverUrl}}"/>
+        <div id="release-info">
+            <h1 id="release-name">{{release.name}}</h1>
+            <h2 id="release-artist-credit">{{release.artistCredit}}</h2>
+            <h3 id="release-date">{{release.date}}</h3>
+            <div class="release-controls">
+                <button class="play" onclick="play_tracks({{release.tracks.mbid}})"></button>
+                <button class="queue" onclick="add_tracks({{release.tracks.mbid}})"></button>
             </div>
         </div>
-        {{player}}
-    </body>
-</html>
+        <ul id="release-tracks">
+            {{release.tracks}}
+        </ul>
+    </div>
+</div>

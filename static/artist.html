@@ -1,13 +1,4 @@
-<html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>{{artist.name}}</title>
-    <script src="/static/script.js"></script>
-    <link rel="stylesheet" href="/static/style.css" />
-  </head>
-  <body>
-    {{nav}}
-    <div id="content">
+<div id="content">
     <h1 id="artist-name">{{artist.name}}</h1>
     <h2>Releases</h2>
     <ul id="artist-releases">
@@ -16,7 +7,4 @@
     <h2 id="artist-appearance">Appearances</h2>
     <ul id="artist-appearances-list">
         {{artist.appearances}}
-    </div>
-    {{player}}
-  </body>
-</html>
+</div>

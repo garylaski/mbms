@@ -71,6 +71,7 @@ type Server struct {
     allTrackHTML     []byte
     allArtistHTML    []byte
     searchHTML       []byte
+    headHTML       []byte
 }
 
 func (server Server) getNamesFromMBID(mbid string) string {
@@ -123,9 +124,15 @@ func (server Server) generateAllArtistHTML() string {
     return html
 }
 func (server Server) generateReleaseHTML(release Release) string {
-    html := string(server.releaseHTML)
-    html = strings.Replace(html, "{{nav}}", string(server.navHTML), -1)
-    html = strings.Replace(html, "{{player}}", string(server.playerHTML), -1)
+    html := "<html>"
+    html += string(server.headHTML)
+    html += "<body>"
+    html += string(server.navHTML)
+    html += string(server.releaseHTML)
+    html += string(server.playerHTML)
+    html += "</body>"
+    html += "</html>"
+    html = strings.Replace(html, "{{title}}", release.name, -1)
     html = strings.Replace(html, "{{release.name}}", release.name, -1)
     html = strings.Replace(html, "{{release.date}}", release.date, -1)
     html = strings.Replace(html, "{{release.coverUrl}}", url.PathEscape(release.coverUrl), -1)
@@ -151,12 +158,18 @@ func (server Server) generateSmallReleaseHTML(release Release) string {
     return html
 }
 func (server Server) generateArtistHTML(artist Artist) string {
-    html := string(server.artistHTML)
-    html = strings.Replace(html, "{{nav}}", string(server.navHTML), -1)
-    html = strings.Replace(html, "{{player}}", string(server.playerHTML), -1)
+    html := "<html>"
+    html += string(server.headHTML)
+    html += "<body>"
+    html += string(server.navHTML)
+    html += string(server.artistHTML)
+    html += string(server.playerHTML)
+    html += "</body>"
+    html += "</html>"
     if artist.name == "" {
         artist.name = server.getNamesFromMBID(artist.mbid)
     }
+    html = strings.Replace(html, "{{title}}", artist.name, -1)
     html = strings.Replace(html, "{{artist.name}}", artist.name, -1)
     var releasesHTML = ""
     for _, release := range artist.releases {
@@ -448,6 +461,7 @@ func main() {
     server.allReleaseHTML, err = os.ReadFile("./static/allRelease.html")
     server.allArtistHTML, err = os.ReadFile("./static/allArtist.html")
     server.searchHTML, err = os.ReadFile("./static/search.html")
+    server.headHTML, err = os.ReadFile("./static/head.html")
     http.HandleFunc("/release/", func(w http.ResponseWriter, r *http.Request) {
         releaseHandler(w, r, server)
     })
