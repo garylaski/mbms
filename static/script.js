@@ -2,7 +2,7 @@ let playlist = [];
 let current_track = 0;
 function add_track(mbid) {
     playlist.push(mbidToJSONTrack(mbid));
-    let url = "../../playlist/add/" + mbid;
+    let url = "/playlist/add/" + mbid;
     let request = new XMLHttpRequest();
     request.open("GET", url, false);
     request.send(null);
@@ -26,7 +26,7 @@ function toggle() {
     }
 }
 function mbidToJSONTrack(mbid) {
-    let url = "../../track/" + mbid;
+    let url = "/track/" + mbid;
     let request = new XMLHttpRequest();
     request.open("GET", url, false);
     request.send(null);
@@ -41,7 +41,7 @@ function play_track(mbid) {
     if (document.getElementById("play")) {
         document.getElementById("play").id = "pause";
     }
-    audio.src = "../../media/" + playlist[current_track].url;
+    audio.src = "/media/" + playlist[current_track].url;
     set_player(track);
     audio.play();
 }
@@ -53,7 +53,7 @@ function play_tracks(mbids) {
     if (document.getElementById("play")) {
         document.getElementById("play").id = "pause";
     }
-    audio.src = "../../media/" + playlist[current_track].url;
+    audio.src = "/media/" + playlist[current_track].url;
     set_player(playlist[current_track]);
     audio.play();
 }
@@ -77,7 +77,7 @@ function next_track() {
         return;
     }
     let audio = document.getElementById("audio");
-    audio.src = "../../media/" + playlist[current_track].url;
+    audio.src = "/media/" + playlist[current_track].url;
     set_player(playlist[current_track]);
     audio.play();
 }
@@ -88,7 +88,7 @@ function prev_track() {
         return;
     }
     let audio = document.getElementById("audio");
-    audio.src = "../../media/" + playlist[current_track].url;
+    audio.src = "/media/" + playlist[current_track].url;
     set_player(playlist[current_track]);
     audio.play();
 }

@@ -181,7 +181,7 @@ func (server Server) generateArtistCreditNameHTML (artistCreditName ArtistCredit
 func (server Server) generateArtistCreditHTML(artistCredit ArtistCredit) string {
     artistCreditNameHTML := artistCredit.name
     for _, artistCreditName := range artistCredit.artistCreditNames {
-        artistCreditNameHTML = strings.Replace(artistCreditNameHTML, artistCreditName.name, fmt.Sprintf("<a href=\"../../artist/%s\" onclick=\"ajax('../../artist/%s'); return false;\">%s</a>", artistCreditName.artistMbid, artistCreditName.artistMbid, artistCreditName.name), -1)
+        artistCreditNameHTML = strings.Replace(artistCreditNameHTML, artistCreditName.name, fmt.Sprintf("<a href=\"/artist/%s\" onclick=\"ajax('/artist/%s'); return false;\">%s</a>", artistCreditName.artistMbid, artistCreditName.artistMbid, artistCreditName.name), -1)
     }
     return artistCreditNameHTML
 }
