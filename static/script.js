@@ -1,19 +1,8 @@
 let playlist = [];
 let current_track = 0;
-function add_track(mbid) {
-    playlist.push(mbidToJSONTrack(mbid));
-    let url = "/playlist/add/" + mbid;
-    let request = new XMLHttpRequest();
-    request.open("GET", url, false);
-    request.send(null);
-}
-function toggle_playlist() {
-    pl = document.getElementById("playlist");
-    if (pl.style.display === "none") {
-        pl.style.display = "flex";
-    } else {
-        pl.style.display = "none";
-    }
+function add_track(id) {
+    let track = get_track_json(id);
+    playlist.push(track);
 }
 function toggle() {
     audio = document.getElementById("audio");
@@ -25,15 +14,15 @@ function toggle() {
         document.getElementById("pause").id = "play";
     }
 }
-function mbidToJSONTrack(mbid) {
-    let url = "/track/" + mbid;
+function get_track_json(id) {
+    let url = "/rest/getTrack?id=" + id;
     let request = new XMLHttpRequest();
     request.open("GET", url, false);
     request.send(null);
     return JSON.parse(request.responseText);
 }
-function play_track(mbid) {
-    let track = mbidToJSONTrack(mbid);
+function play_track(id) {
+    let track = get_track_json(id);
     playlist = [track];
     current_track = 0;
     let audio = document.getElementById("audio");
@@ -45,9 +34,9 @@ function play_track(mbid) {
     set_player(track);
     audio.play();
 }
-function play_tracks(mbids) {
+function play_tracks(ids) {
     playlist = [];
-    add_tracks(mbids);
+    add_tracks(ids);
     current_track = 0;
     let audio = document.getElementById("audio");
     if (document.getElementById("play")) {
@@ -57,17 +46,19 @@ function play_tracks(mbids) {
     set_player(playlist[current_track]);
     audio.play();
 }
-function add_tracks(mbids) {
+function add_tracks(ids) {
     // Add tracks to playlist
-    for (i in mbids) {
-        add_track(mbids[i]);
+    for (i in ids) {
+        add_track(ids[i]);
     }
 }
 function set_player(track) {
     document.getElementById("player-name").innerHTML = track.name;
     document.getElementById("player-length").innerHTML = new Date(track.length).toISOString().slice(14, 19);
-    document.getElementById("player-artist-credit").innerHTML = track.artistCredit;
-    document.getElementById("track-cover").src = "/media/" + track.releaseCoverUrl;
+    document.getElementById("player-artist-credit").innerHTML = track.artist_credit_html;
+    document.getElementById("track-cover").src = "/media/" + track.cover_url;
+    document.getElementById("release-url").href = "/release/" + track.release_mbid;
+    document.getElementById("release-url").onclick = function() { ajax("/release/" + track.release_mbid); return false;};
     document.getElementById("seek-slider").max = track.length;
 }
 function next_track() {
@@ -97,13 +88,12 @@ function ajax_load(url) {
     let xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState == 4 && xhr.status == 200) {
-            let html = document.createElement("html");
-            html.innerHTML = xhr.responseText;
-            localStorage.setItem('response', xhr.responseText);
-            document.getElementById("content").innerHTML = html.querySelector("#content").innerHTML;
+            document.getElementById("content").innerHTML = xhr.responseText;
+            document.title = document.getElementById("title").innerHTML;
+            localStorage.setItem("last_url", url);
         }
     };
-    xhr.open("GET", url, true);
+    xhr.open("GET", "/ajax/" + url, true);
     xhr.send();
 }
 
@@ -127,7 +117,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 window.onpopstate = function (e) {
-    ajax(window.location.href);
+    ajax_load(window.location.pathname);
 }
 window.onload = function() {
     let audio = document.getElementById("audio");

@@ -47,3 +47,15 @@ CREATE TABLE type (
     name                VARCHAR NOT NULL,
     unique (name)
 );
+CREATE TABLE artist_artist_rel (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    artist1             INTEGER NOT NULL,
+    artist2             INTEGER NOT NULL,
+    type                INTEGER NOT NULL,
+    unique (artist1, artist2, type)
+);
+CREATE TABLE artist_artist_rel_type (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                VARCHAR NOT NULL,
+    unique (name)
+);

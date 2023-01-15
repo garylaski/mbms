@@ -130,7 +130,7 @@ nav form {
     display: flex;
     flex-direction: column;
 }
-#player-name, #player-artist-credit, .small-release {
+#player-name, #player-artist-credit, .release-item {
     text-overflow: ellipsis;
     overflow: hidden;
     white-space: nowrap;
@@ -178,15 +178,15 @@ nav form {
 .small-release-img {
     width: 100%;
 }
-.small-release {
+.release-item {
     width: 10vw;
     display: flex;
     flex-direction: column;
 }
-.small-release * {
+.release-item * {
     margin-right: auto;
 }
-#artist-releases, #search-releases, #artist-appearances-list {
+.release-list {
     display: flex;
     flex-wrap: wrap;
     column-gap: 1em;

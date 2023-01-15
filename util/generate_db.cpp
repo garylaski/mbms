@@ -9,16 +9,75 @@
 #include <filesystem>
 #include <map>
 #include <string>
+#include <iostream>
+#include <curl/curl.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxml/xpath.h>
+#include <libxml/xpathInternals.h>
+#include <cstring>
+#include <chrono>
+#include <thread>
 using namespace std;
 struct {
     map<TagLib::String, int> artists;
     map<TagLib::String, int> releases;
     map<TagLib::String, int> artist_credits;
     map<TagLib::String, int> types;
+    map<TagLib::String, int> artist_artist_relations;
+    map<TagLib::String, int> artist_artist_relations_types;
 } cache;
 string audio_ext = "flacaacmp3opusm4a";
 sqlite3 *db;
+CURL *curl = curl_easy_init();
+CURLcode res;
+struct curl_slist *headers = NULL;
 char* date = "0000-00-00";
+size_t processArtist(const char* contents, size_t size, size_t nmemb, string *mbid) {
+    size_t realsize = size * nmemb;
+    string name;
+    // xml parsing
+    xmlDoc* doc = xmlReadMemory(contents, realsize, "noname.xml", NULL, 0);
+    xmlXPathContext* xpathCtx = xmlXPathNewContext(doc);
+    xmlXPathRegisterNs(xpathCtx, (const xmlChar*)"mb", (const xmlChar*)"http://musicbrainz.org/ns/mmd-2.0#");
+    xmlXPathObject* xpathObj = xmlXPathEvalExpression((xmlChar*) "/mb:metadata/mb:artist/mb:name", xpathCtx);
+    xmlNodeSet* nodes = xpathObj->nodesetval;
+    for (int i = 0; i < nodes->nodeNr; i++) {
+        xmlNode* node = nodes->nodeTab[i];
+        if (node->type == XML_ELEMENT_NODE) {
+            *name = (char*) node->children->content;
+        }
+    }
+    xmlXPathFreeObject(xpathObj);
+    xmlXPathFreeContext(xpathCtx);
+    xmlFreeDoc(doc);
+    xmlCleanupParser();
+    // copy to name
+    return realsize;
+}
+int addArtistArtistRelationType(string type) {
+    const char *query = "INSERT INTO artist_artist_relation_types (name) VALUES (?);";
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, type.c_str(), -1, SQLITE_STATIC);
+    sqlite3_step(stmt);
+    return sqlite3_last_insert_rowid(db);
+}
+int addArtistArtistRelation(int artist_id, int related_artist_id, string artist_artist_relation_type) {
+    int artist_artist_relation_type_id;
+    if ((artist_artist_relation_type_id = cache.artist_artist_relations_types[artist_artist_relation_type]) == 0) {
+        artist_artist_relation_type_id = addArtistArtistRelationType(artist_artist_relation_type);
+        cache.artist_artist_relations_types[artist_artist_relation_type] = artist_artist_relation_type_id;
+    }
+    const char* query = "INSERT INTO artist_artist_rel (artist, related_artist, artist_artist_relation_type) VALUES (?, ?, ?)";
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_int(stmt, 1, artist_id);
+    sqlite3_bind_int(stmt, 2, related_artist_id);
+    sqlite3_bind_int(stmt, 3, artist_artist_relation_type_id);
+    sqlite3_step(stmt);
+    return sqlite3_last_insert_rowid(db);
+}
 int addTrack(TagLib::PropertyMap tags, int artist_credit_id, int length, int release_id, const char* url) {
     const char* query = "INSERT INTO track (mbid, name, number, artist_credit, length, release, url) VALUES (?, ?, ?, ?, ?, ?, ?)";
     sqlite3_stmt *stmt;
@@ -40,6 +99,29 @@ int addArtist(TagLib::String mbid) {
     sqlite3_bind_text(stmt, 1, mbid.toCString(), -1, SQLITE_STATIC);
     sqlite3_step(stmt);
     return sqlite3_last_insert_rowid(db);
+}
+int addArtistName(string mbid, string name) {
+    cout << "Adding artist name: " << name << endl;
+    const char* query = "UPDATE artist SET name = ? WHERE mbid = ?";
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, mbid.c_str(), -1, SQLITE_STATIC);
+    sqlite3_step(stmt);
+    return sqlite3_last_insert_rowid(db);
+}
+void queryMB_Artist(string mbid, int artist_id) {
+    string url = "http://musicbrainz.org/ws/2/artist/" + mbid + "?inc=artist-rels";
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, processArtist);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &mbid);
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        }
+    }
 }
 void addArtistCreditName(int artist_credit_id, int position, int artist_id, TagLib::String name) {
     const char* query = "INSERT INTO artist_credit_name (artist_credit, position, artist, name) VALUES (?, ?, ?, ?)";
@@ -132,7 +214,8 @@ void processFiles(string path) {
                     } else if (filesystem::exists(cover_url + ".bmp")) {
                         cover_url = cover_url + ".bmp";
                     }
-                    release_id = addRelease(tags, release_mbid, cover_url.c_str());
+                    const char* enc_url = curl_easy_escape(curl, cover_url.c_str(), cover_url.length());
+                    release_id = addRelease(tags, release_mbid, enc_url);
                     cache.releases[release_mbid] = release_id;
                 }
                 TagLib::String artist_credit = tags["ARTIST"][0];
@@ -140,10 +223,33 @@ void processFiles(string path) {
                     artist_credit_id = addArtistCredit(artist_credit, tags["ARTISTS"], tags["MUSICBRAINZ_ARTISTID"]);
                     cache.artist_credits[artist_credit] = artist_credit_id;
                 }
-                addTrack(tags, artist_credit_id, length, release_id, filename.c_str());
+                const char* enc_url = curl_easy_escape(curl, filename.c_str(), filename.length());
+                cout << "Adding " << filename << endl;
+                addTrack(tags, artist_credit_id, length, release_id, enc_url);
             }
         }
     }
+}
+
+void postProcess() {
+    if (curl) {
+        headers = curl_slist_append(headers, "User-Agent: mbms/0.0.1");
+    }
+    string artist_mbid;
+    int artist_id;
+    const char* query = "SELECT id, mbid FROM artist";
+    sqlite3_stmt *stmt;
+    sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    // iterate over all artists and add their name
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int artist_id = sqlite3_column_int(stmt, 0);
+        artist_mbid = string(reinterpret_cast<const char*> (sqlite3_column_text(stmt, 1)));
+        cout << "Processing artist " << artist_mbid << endl;
+        queryMB_Artist(artist_mbid, artist_id);
+        this_thread::sleep_for(chrono::milliseconds(1000));
+        this_thread::sleep_until(chrono::system_clock::now() + chrono::milliseconds(1000));
+    }
+    sqlite3_finalize(stmt);
 }
 int main(int argc, char *argv[]) {
     sqlite3 *file;
@@ -153,8 +259,9 @@ int main(int argc, char *argv[]) {
         string sql = string(istreambuf_iterator<char>(createTables), istreambuf_iterator<char>());
         sqlite3_exec(db, sql.c_str(), NULL, NULL, NULL);
     }
-    string path = "/backup/source";
+    string path = "/backup/source/lossless/Tek Lintowe";
     processFiles(path);
+    postProcess();
     sqlite3_backup *pBackup = sqlite3_backup_init(file, "main", db, "main");
     if(pBackup){
       sqlite3_backup_step(pBackup, -1);
@@ -162,4 +269,5 @@ int main(int argc, char *argv[]) {
     }
     //save sqlite db to file
     sqlite3_close(db);
+    curl_easy_cleanup(curl);
 }

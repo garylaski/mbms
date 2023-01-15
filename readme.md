@@ -1,4 +1,7 @@
 - ajax queries repond with entire page, not just new material.
+    - seperate ajax endpoint /ajax/
+    - refactor go artist, track, release handlers
+    - add new ajax handlers for artist, track, release
 - cache album art
 - add all artists,releases,tracks page
 - other sqlite drivers for performance
