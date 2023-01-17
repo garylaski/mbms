@@ -25,7 +25,7 @@ int main(int argc, char** argv)
         {
             if (is_audio_file(entry.path().extension()))
             {
-                tag_extractor.extract(entry.path());
+                tag_extractor.extract(&entry.path());
             } 
         }
     }
