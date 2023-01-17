@@ -1,27 +1,23 @@
+R"###(
 CREATE TABLE artist (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     mbid                VARCHAR(36) NOT NULL,
     name                VARCHAR,
     unique (mbid)
 );
 
 CREATE TABLE artist_credit (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     name                VARCHAR NOT NULL,
-    artist_count        INTEGER NOT NULL,
     unique (name)
 );
 
 CREATE TABLE artist_credit_name (
     artist_credit       INTEGER NOT NULL,
-    position            INTEGER NOT NULL,
     artist              INTEGER NOT NULL,
     name                VARCHAR NOT NULL,
-    unique (artist_credit, position)
+    unique (artist_credit, artist)
 );
 
 CREATE TABLE track (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     mbid                VARCHAR(36) NOT NULL,
     name                VARCHAR NOT NULL,
     number              INTEGER NOT NULL,
@@ -33,7 +29,6 @@ CREATE TABLE track (
 );
 
 CREATE TABLE release (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     mbid                VARCHAR(36) NOT NULL,
     name                VARCHAR NOT NULL,
     artist_credit       INTEGER NOT NULL,
@@ -43,19 +38,7 @@ CREATE TABLE release (
     unique (mbid)
 );
 CREATE TABLE type (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     name                VARCHAR NOT NULL,
     unique (name)
 );
-CREATE TABLE artist_artist_rel (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    artist1             INTEGER NOT NULL,
-    artist2             INTEGER NOT NULL,
-    type                INTEGER NOT NULL,
-    unique (artist1, artist2, type)
-);
-CREATE TABLE artist_artist_rel_type (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    name                VARCHAR NOT NULL,
-    unique (name)
-);
+)###"

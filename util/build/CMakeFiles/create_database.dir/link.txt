@@ -1,0 +1,1 @@
+/bin/c++ -g CMakeFiles/create_database.dir/main.cpp.o -o create_database  -Wl,-rpath,/home/gary/repos/mbms/util/build libTagExtractor.so libDatabaseManager.so -lsqlite3 -lcurl -ltag 
