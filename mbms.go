@@ -10,7 +10,6 @@ import (
     "strings"
     "net/http/pprof"
 )
-
 type Server struct {
     db               *sql.DB
     navHTML          string
@@ -22,6 +21,7 @@ type Server struct {
     listHTML         string
     artistItemHTML   string
     headHTML         string
+    artist_artist_rel_map map[string][2]string
 }
 
 func convertMsToTime(ms int) string {
@@ -32,7 +32,7 @@ func convertMsToTime(ms int) string {
 }
 func (server Server) queryRelease(mbid string) (string, string, string, string, string, string)  {
     var id, artist_credit_id, _type_id, name, date, cover_url string
-    err := server.db.QueryRow("SELECT * FROM release WHERE mbid = ?", mbid).Scan(&id, &mbid, &name, &artist_credit_id, &date, &_type_id, &cover_url)
+    err := server.db.QueryRow("SELECT rowid,* FROM release WHERE mbid = ?", mbid).Scan(&id, &mbid, &name, &artist_credit_id, &date, &_type_id, &cover_url)
     if err != nil {
         log.Println("queryRelease: ", err)
     }
@@ -66,26 +66,30 @@ func (server Server) generateTrackListHTML(title string, rows *sql.Rows) string 
 }
 func (server Server) generateSearchHTML(search string) string {
     html := "<div id=\"title\" style=\"display:none\">Search results for \"" + search + "\"</div>"
-    rows, err := server.db.Query("SELECT * FROM release WHERE name LIKE ?", "%"+search+"%")
+    rows, err := server.db.Query("SELECT rowid,* FROM release WHERE name LIKE ? LIMIT 16", "%"+search+"%")
     if err != nil {
         log.Println("generateSearchHTML: ", err)
     }
     html += server.generateReleaseListHTML("Releases", rows)
-    rows, err = server.db.Query("SELECT * FROM track WHERE name LIKE ?", "%"+search+"%")
+    rows, err = server.db.Query("SELECT rowid,* FROM track WHERE name LIKE ? LIMIT 10", "%"+search+"%")
     if err != nil {
         log.Println("generateSearchHTML: ", err)
     }
     html += server.generateTrackListHTML("Tracks", rows)
+    rows, err = server.db.Query("SELECT rowid,* FROM artist WHERE rowid IN (SELECT artist FROM artist_credit_name WHERE name LIKE ? GROUP BY artist) LIMIT 10", "%"+search+"%")
+    if err != nil {
+        log.Println("generateSearchHTML: ", err)
+    }
+    html += server.generateArtistListHTML("Artists", rows)
     return html
 }
-func (server Server) queryArtistCredit(id string) (string, int) {
-    var artist_count int
+func (server Server) queryArtistCredit(id string) string {
     var name string
-    err := server.db.QueryRow("SELECT * FROM artist_credit WHERE id = ?", id).Scan(&id, &name, &artist_count)
+    err := server.db.QueryRow("SELECT rowid,* FROM artist_credit WHERE rowid = ?", id).Scan(&id, &name)
     if err != nil {
         log.Println("queryArtistCredit: ", err)
     }
-    return name, artist_count
+    return name
 }
 func (server Server) generateReleaseHTML(mbid string) string {
     html := server.releaseHTML
@@ -94,7 +98,7 @@ func (server Server) generateReleaseHTML(mbid string) string {
     html = strings.Replace(html, "{{release.date}}", date, 1)
     html = strings.Replace(html, "{{release.coverUrl}}", url, 1)
     html = strings.Replace(html, "{{release.artistCredit}}", server.generateArtistCreditHTML(artist_credit_id), 1)
-    rows, err := server.db.Query("SELECT * FROM track WHERE release = ? ORDER BY number", id)
+    rows, err := server.db.Query("SELECT rowid,* FROM track WHERE release = ? ORDER BY number", id)
     if err != nil {
         log.Println("generateReleaseHTML: ", err)
     }
@@ -124,12 +128,12 @@ func (server Server) getTrack(id string) string {
     // json of song
     var number, release_id, length int
     var mbid, name, url, artist_credit_id string
-    err := server.db.QueryRow("SELECT * FROM track WHERE id = ?", id).Scan(&id, &mbid, &name, &number, &artist_credit_id, &length, &release_id, &url)
+    err := server.db.QueryRow("SELECT rowid,* FROM track WHERE rowid = ?", id).Scan(&id, &mbid, &name, &number, &artist_credit_id, &length, &release_id, &url)
     if err != nil {
         log.Println("getTrack: ", err)
     }
     var cover_url, artist_credit_html, release_mbid string
-    err = server.db.QueryRow("SELECT cover_url, mbid FROM release WHERE id = ?", release_id).Scan(&cover_url, &release_mbid)
+    err = server.db.QueryRow("SELECT cover_url, mbid FROM release WHERE rowid = ?", release_id).Scan(&cover_url, &release_mbid)
     if err != nil {
         log.Println("getTrack: ", err)
     }
@@ -138,7 +142,7 @@ func (server Server) getTrack(id string) string {
 }
 func (server Server) generateArtistCreditHTML(id string) string {
     var artist, mbid string
-    name, _ := server.queryArtistCredit(id)
+    name := server.queryArtistCredit(id)
     html := name
     rows, err := server.db.Query("SELECT artist, name FROM artist_credit_name WHERE artist_credit = ?", id)
     if err != nil {
@@ -149,7 +153,7 @@ func (server Server) generateArtistCreditHTML(id string) string {
         if err != nil {
             log.Println("generateArtistCreditHTML: ", err)
         }
-        err = server.db.QueryRow("SELECT mbid FROM artist WHERE id = ?", artist).Scan(&mbid)
+        err = server.db.QueryRow("SELECT mbid FROM artist WHERE rowid = ?", artist).Scan(&mbid)
         if err != nil {
             log.Fatal(err)
         }
@@ -184,7 +188,7 @@ func (server Server) generateReleaseListHTML(title string, rows *sql.Rows) strin
 }
 func (server Server) getId(table string, selector string, query string) string {
     var id string
-    err := server.db.QueryRow(fmt.Sprintf("SELECT id FROM %s WHERE %s = ?", table, selector), query).Scan(&id)
+    err := server.db.QueryRow(fmt.Sprintf("SELECT rowid FROM %s WHERE %s = ?", table, selector), query).Scan(&id)
     if err != nil {
         log.Println("getId: ", err)
     }
@@ -208,7 +212,7 @@ func (server Server) generateArtistListHTML(title string, rows *sql.Rows) string
         return ""
     }
     html := server.listHTML
-    html = strings.Replace(html, "{{title}}", "Related Artists:", 1)
+    html = strings.Replace(html, "{{title}}", title, 1)
     html = strings.Replace(html, "{{type}}", "artist-artist-rel", 1)
     html = strings.Replace(html, "{{items}}", items, 1)
     return html
@@ -217,31 +221,60 @@ func (server Server) generateArtistHTML(mbid string) string {
     html := server.artistHTML
     var artist_id string
     var artist_name sql.NullString
-    err := server.db.QueryRow("SELECT * FROM artist WHERE mbid = ?", mbid).Scan(&artist_id, &mbid, &artist_name)
+    err := server.db.QueryRow("SELECT rowid,* FROM artist WHERE mbid = ?", mbid).Scan(&artist_id, &mbid, &artist_name)
     if err != nil {
         log.Println("generateArtistHTML: ", err)
     }
     html = strings.Replace(html, "{{artist.name}}", artist_name.String, 1)
-    rows, err := server.db.Query("SELECT * FROM release WHERE artist_credit IN (SELECT artist_credit FROM artist_credit_name WHERE artist = ?) ORDER BY date DESC", artist_id)
+    rows, err := server.db.Query("SELECT rowid,* FROM release WHERE artist_credit IN (SELECT artist_credit FROM artist_credit_name WHERE artist = ?) ORDER BY date DESC", artist_id)
     if err != nil {
         log.Println("generateArtistHTML: ", err)
     }
     items := server.generateReleaseListHTML("Releases", rows)
     html = strings.Replace(html, "{{artist.releases}}", items, 1)
     items = ""
-    rows, err = server.db.Query("SELECT * FROM release WHERE id IN (SELECT release FROM track WHERE artist_credit IN (SELECT artist_credit FROM artist_credit_name WHERE artist = ?) GROUP BY release) AND release.artist_credit NOT IN (SELECT artist_credit FROM artist_credit_name WHERE artist = ?) ORDER BY release.date DESC", artist_id, artist_id)
+    rows, err = server.db.Query("SELECT rowid,* FROM release WHERE rowid IN (SELECT release FROM track WHERE artist_credit IN (SELECT artist_credit FROM artist_credit_name WHERE artist = ?) GROUP BY release) AND release.artist_credit NOT IN (SELECT artist_credit FROM artist_credit_name WHERE artist = ?) ORDER BY release.date DESC", artist_id, artist_id)
     if err != nil {
         log.Println("generateArtistHTML: ", err)
     }
     items = server.generateReleaseListHTML("Appears on", rows)
     html = strings.Replace(html, "{{artist.appearances}}", items, 1)
-    rows, err = server.db.Query("SELECT * from artist WHERE id = (SELECT artist2 FROM artist_artist_rel WHERE artist1 = ?)", artist_id)
-    if err != nil {
-        log.Println("generateArtistArtistRelsHTML: ", err)
-    }
-    items = server.generateArtistListHTML("Related Artists", rows)
+    rows, err = server.db.Query("SELECT artist,type,direction FROM artist_artist_relation WHERE artist = ? GROUP by type", artist_id)
+    items = server.generateRelatedArtistListHTML(rows)
     html = strings.Replace(html, "{{artist.artist-rels}}", items, 1)
     return html
+}
+func (server Server) generateRelatedArtistListHTML(rows *sql.Rows) string {
+    var type_id, direction_id int
+    var direction bool
+    var artist_id, items, type_name string
+    empty := true
+    for rows.Next() {
+        empty = false
+        err := rows.Scan(&artist_id, &type_id, &direction)
+        if (direction) {
+            direction_id = 1
+        } else {
+            direction_id = 0    
+        }
+        if err != nil {
+            log.Println("generateRelatedArtistListHTML: ", err)
+        }
+        err = server.db.QueryRow("SELECT name FROM artist_artist_relation_type WHERE rowid = ?", type_id).Scan(&type_name)
+        if err != nil {
+            log.Println("generateRelatedArtistListHTML: ", err)
+        }
+        artist_rows, err := server.db.Query("SELECT rowid,* FROM artist WHERE rowid IN (SELECT related_artist FROM artist_artist_relation WHERE artist = ? AND type = ?)", artist_id, type_id)
+        if err != nil {
+            log.Println("generateRelatedArtistListHTML: ", err)
+        }
+        type_name = server.artist_artist_rel_map[type_name][direction_id]
+        items += server.generateArtistListHTML(type_name, artist_rows)
+    }
+    if empty {
+        return ""
+    }
+    return items
 }
 
 func (server Server) generatePage(content string) string {
@@ -283,6 +316,14 @@ func main() {
     server.artistHTML = string(artistHTML)
     server.listHTML = string(listHTML)
     server.artistItemHTML = string(artistItemHTML)
+    server.artist_artist_rel_map = map[string][2]string{
+        "member of band": [2]string{"Members:", "Member of:"},
+        "is person": [2]string{"Legal name:", "Also performs as:"},
+        "involved with": [2]string{"Involved with:", "Involved with:"},
+        "founder": [2]string{"Founded:", "Founded by:"},
+        "sibling": [2]string{"Siblings:", "Siblings:"},
+        "parent": [2]string{"Parents:", "Children:"},
+    }
     mux.HandleFunc("/release/", func(w http.ResponseWriter, r *http.Request) {
         mbid := r.URL.Path[9:]
         fmt.Fprint(w, server.generatePage(server.generateReleaseHTML(mbid)))
@@ -291,7 +332,7 @@ func main() {
         mbid := r.URL.Path[8:]
         fmt.Fprint(w, server.generatePage(server.generateArtistHTML(mbid)))
     })
-    mux.HandleFunc("search", func(w http.ResponseWriter, r *http.Request) {
+    mux.HandleFunc("/search", func(w http.ResponseWriter, r *http.Request) {
         query := r.URL.Query().Get("q")
         fmt.Fprint(w, server.generatePage(server.generateSearchHTML(query)))
     })

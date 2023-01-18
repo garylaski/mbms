@@ -2,6 +2,7 @@
 #include "TagExtractor.h"
 #include <iostream>
 #include <filesystem>
+
 bool is_audio_file(const std::filesystem::path ext)
 {
     return ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac";
@@ -17,7 +18,7 @@ int main(int argc, char** argv)
         std::cout << "Usage: " << argv[0] << " <music directory>" << std::endl;
         return 1;
     }
-    DatabaseManager database_manager("mbms.sqlite");
+    DatabaseManager database_manager("../../mb.db");
     TagExtractor tag_extractor(&database_manager);
     for (const auto & entry : std::filesystem::recursive_directory_iterator(argv[1]))
     {
@@ -29,4 +30,5 @@ int main(int argc, char** argv)
             } 
         }
     }
+    database_manager.update_artist_info();
 }

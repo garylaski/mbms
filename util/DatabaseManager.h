@@ -16,6 +16,7 @@ public:
     int get_release_id(char const* mbid);
     int get_artist_credit_id(char const* name);
     int get_artist_id(char const* mbid);
+    bool update_artist_info();
 private:
     sqlite3* m_database;
     const char* m_database_path;

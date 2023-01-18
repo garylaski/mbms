@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <stdexcept>
 #include <iostream>
+#include <musicbrainz5/Query.h>
+#include <musicbrainz5/Artist.h>
 
 DatabaseManager::DatabaseManager(char const* database_path): 
     m_database_path(database_path) 
@@ -114,4 +116,30 @@ int DatabaseManager::get_artist_id(char const* mbid) {
     int id = sqlite3_column_int(m_statement, 0);
     sqlite3_finalize(m_statement);
     return id;
+}
+bool DatabaseManager::update_artist_info() {
+    // select all artists and loop over them
+    m_query = "SELECT rowid, mbid FROM artist";
+    sqlite3_prepare_v2(m_database, m_query, -1, &m_statement, NULL);
+    sqlite3_stmt* statement;
+    MusicBrainz5::CQuery Query("ArtistName");
+    MusicBrainz5::CMetadata metadata;
+    MusicBrainz5::CQuery::tParamMap params;
+    params["inc"] = "artist-rels";
+    while (sqlite3_step(m_statement) == SQLITE_ROW) {
+        int id = sqlite3_column_int(m_statement, 0);
+        char const* mbid = (char const*)sqlite3_column_text(m_statement, 1);
+        metadata = Query.Query("artist", mbid, "", params);
+        char const* name = metadata.Artist()->Name().c_str();
+        // update artist info
+        std::cout << "Updating artist info for " << name << std::endl;
+        m_query = "UPDATE artist SET name = ? WHERE rowid = ?";
+        sqlite3_prepare_v2(m_database, m_query, -1, &statement, NULL);
+        sqlite3_bind_text(statement, 1, name, -1, SQLITE_STATIC);
+        sqlite3_bind_int(statement, 2, id);
+        sqlite3_step(statement);
+        sqlite3_finalize(statement);
+    }
+    sqlite3_finalize(m_statement);
+    return true;
 }
