@@ -1,1 +1,0 @@
-/bin/c++ -fPIC -g -shared -Wl,-soname,libTagExtractor.so -o libTagExtractor.so CMakeFiles/TagExtractor.dir/TagExtractor.cpp.o  -Wl,-rpath,/home/gary/repos/mbms/util/build libDatabaseManager.so -lcurl -ltag -lsqlite3 

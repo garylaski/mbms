@@ -1,5 +1,0 @@
-/home/gary/repos/mbms/util/build/CMakeFiles/create_database.dir
-/home/gary/repos/mbms/util/build/CMakeFiles/DatabaseManager.dir
-/home/gary/repos/mbms/util/build/CMakeFiles/TagExtractor.dir
-/home/gary/repos/mbms/util/build/CMakeFiles/edit_cache.dir
-/home/gary/repos/mbms/util/build/CMakeFiles/rebuild_cache.dir
