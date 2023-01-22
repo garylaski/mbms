@@ -4,6 +4,11 @@
 #include <taglib/tstring.h>
 #include <taglib/tstringlist.h>
 #include <taglib/tfile.h>
+#include <taglib/mp4atom.h>
+#include <taglib/mp4file.h>
+#include <taglib/mpegfile.h>
+#include <taglib/id3v2tag.h>
+#include <taglib/tbytevector.h>
 #include <curl/curl.h>
 #include "TagExtractor.h"
 #include <filesystem>
@@ -16,10 +21,24 @@ TagExtractor::TagExtractor(DatabaseManager* database_manager):
 
     void TagExtractor::extract(std::filesystem::path const* path) {
         m_filename = path->c_str();
-        std::cout << "Extracting tags from " << m_filename << std::endl;
         TagLib::FileRef f(m_filename);
-        m_track.length = f.audioProperties()->lengthInMilliseconds();
         m_properties = f.file()->properties();
+        m_track.length = f.audioProperties()->lengthInMilliseconds();
+        if (m_properties.unsupportedData().size() > 0) {
+            for (auto const& data : m_properties.unsupportedData()) {
+                TagLib::StringList header = TagLib::StringList::split(data, ":");
+                long start = f.file()->find(header[2].data(TagLib::String::Type::UTF8));
+                f.file()->seek(start);
+                long end = f.file()->find(header[0].data(TagLib::String::Type::UTF8), start);
+                f.file()->seek(start + header[2].size());
+                TagLib::ByteVector rdata = f.file()->readBlock(end - start - header[2].size());
+
+                TagLib::ByteVectorList values = TagLib::ByteVectorList::split(rdata, TagLib::ByteVector::fromCString("data"));
+                values.erase(values.begin());
+                TagLib::StringList list(values);
+                m_properties.insert(header[2].upper().toCString(true), list);
+            }
+        }
         m_release.mbid = m_properties["MUSICBRAINZ_ALBUMID"][0].toCString();
         if ((m_track.release = m_database_manager->get_release_id(m_release.mbid)) == 0) {
             m_artist_credit.name = m_properties["ALBUMARTIST"][0].toCString(true);
@@ -28,6 +47,8 @@ TagExtractor::TagExtractor(DatabaseManager* database_manager):
                 for (int i = 0; i < m_properties["MUSICBRAINZ_ALBUMARTISTID"].size(); i++) {
                     m_artist.mbid = m_properties["MUSICBRAINZ_ALBUMARTISTID"][i].toCString();
                     m_artist_credit_name.artist_credit = m_release.artist_credit;
+                    m_artist_credit_name.name = m_properties["ALBUMARTISTS"][i].toCString(true);
+                    return;
                     m_artist_credit_name.name = m_properties["ALBUMARTISTS"][i].toCString(true);
                     if ((m_artist_credit_name.artist = m_database_manager->get_artist_id(m_artist.mbid)) == 0) {
                         m_artist_credit_name.artist = m_database_manager->add_artist(&m_artist);
