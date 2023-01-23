@@ -16,7 +16,7 @@ a:hover {
     margin: 0;
 }
 #content {
-    width: 70vw;
+    max-width: 70rem;
     margin: 1rem auto;
     margin-bottom: 5rem;
 }
@@ -43,10 +43,11 @@ ul {
     padding: 0;
 }
 .track-list li {
+    width: 100%;
     margin: 1rem 0;
-    align-items: center;
-    display: flex;
-    gap: 1rem;
+}
+.margin-right {
+    margin-right: auto;
 }
 img {
     width: 100%;

@@ -1,4 +1,4 @@
-<div id="player" class="flex-col">
+<div id="player" class="flex-column">
     <div class="flex-row">
         <audio id="audio">
             <source src="">
@@ -6,7 +6,7 @@
         <a href="" class="release-url" onclick="">
             <img class="cover" src="">
         </a>
-        <div class="flex-column">
+        <div class="flex-column margin-right">
             <span class="track-name"></span>
             <span class="artist-credit"></span>
         </div>
@@ -15,12 +15,12 @@
                 <button class="play" onclick="toggle()"></button>
                 <button class="next" onclick="next_track()"></button>
             </div>
-            <div>
+            <div class="margin-right">
                 <span id="player-current-length">0:00</span>
                 <span>/</span>
                 <span id="player-length">0:00</span>
             </div>
-        <div>
+        <div class="margin-right">
             <button class="volume" onclick="toggle_vol(this)"></button>
             <input type="range" class="volume-slider" min="0" max="100" value="100" oninput="change_volume(this.value)">
         </div>

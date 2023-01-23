@@ -17,7 +17,7 @@ type Server struct {
     releaseHTML      string
     artistHTML       string
     releaseItemHTML  string
-    smallTrackHTML   string
+    trackItemHTML    string
     listHTML         string
     artistItemHTML   string
     dragTrackHTML    string
@@ -48,7 +48,7 @@ func (server Server) generateTrackListHTML(title string, rows *sql.Rows) string 
         if err != nil {
             log.Println("generateTrackListHTML: ", err)
         }
-        items += server.smallTrackHTML
+        items += server.trackItemHTML
         items = strings.Replace(items, "{{track.name}}", name, 1)
         items = strings.Replace(items, "{{track.id}}", id, 2)
         items = strings.Replace(items, "{{track.number}}", number, 1)
@@ -136,7 +136,7 @@ func (server Server) generateReleaseHTML(mbid string) string {
         if err != nil {
             log.Println("generateReleaseHTML: ", err)
         }
-        trackHTML = server.smallTrackHTML
+        trackHTML = server.trackItemHTML
         trackHTML = strings.Replace(trackHTML, "{{track.name}}", name, 1)
         trackHTML = strings.Replace(trackHTML, "{{track.id}}", id, 2)
         trackHTML = strings.Replace(trackHTML, "{{track.number}}", number, 1)
@@ -369,7 +369,7 @@ func main() {
     navHTML, err := os.ReadFile("./static/nav.html")
     playerHTML, err := os.ReadFile("./static/player.html")
     releaseHTML, err := os.ReadFile("./static/release.html")
-    smallTrackHTML, err := os.ReadFile("./static/smallTrack.html")
+    trackItemHTML, err := os.ReadFile("./static/track-item.html")
     headHTML, err := os.ReadFile("./static/head.html")
     releaseItemHTML, err := os.ReadFile("./static/release-item.html")
     artistHTML, err := os.ReadFile("./static/artist.html")
@@ -380,7 +380,7 @@ func main() {
     server.navHTML = string(navHTML)
     server.playerHTML = string(playerHTML)
     server.releaseHTML = string(releaseHTML)
-    server.smallTrackHTML = string(smallTrackHTML)
+    server.trackItemHTML = string(trackItemHTML)
     server.headHTML = string(headHTML)
     server.releaseItemHTML = string(releaseItemHTML)
     server.artistHTML = string(artistHTML)

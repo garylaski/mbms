@@ -1,0 +1,10 @@
+<li class="flex-row">
+    <span>{{track.number}}</span>
+    <div class="margin-right flex-column">
+        <span>{{track.name}}</span>
+        <span>{{track.artistCredit}}</span>
+    </div>
+    <button class="play" onclick="play_track('{{track.id}}')"></button>
+    <button class="queue" onClick="add_track('{{track.id}}')"></button>
+    <span>{{track.length}}</span>
+</li>
