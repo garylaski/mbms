@@ -5,7 +5,7 @@
 
 bool is_audio_file(const std::filesystem::path ext)
 {
-    return ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac";
+    return ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac" || ext == ".aac";
 }
 bool is_image_file(const std::filesystem::path ext)
 {

@@ -1,39 +1,8 @@
 body {
+    font-family: "monospace";
     color: white;
     background-color: black;
     margin: 0;
-}
-h1 {
-    font-size: 2em;
-    margin: 0;
-    padding: 0;
-}
-h2, h3 {
-    display: inline-block;
-    font-size: 1.25em;
-    margin: 0;
-}
-#release-date::before {
-    content: " · "
-}
-ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-}
-li {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    margin: 1em 0;
-}
-.track-number {
-    min-width: 1em;
-    margin-right: 1em;
-}
-.track-length {
-    margin-right: 1em;
-    margin-left: auto;
 }
 a {
     color: lightgrey;
@@ -42,152 +11,80 @@ a {
 a:hover {
     text-decoration: underline;
 }
-#release-content {
-    width: 100%;
-    display: inline-grid;
-    grid-column-gap: 1em;
-    grid-template-columns: 30% 70%;
-    margin-bottom: 2em;
-}
 #seek-slider {
-    min-width: 30em;
-    position: relative;
-}
-#release-cover {
-    max-width: 100%;
-    grid-column: 1;
-    grid-row: 1;
-}
-#release-info {
-    grid-column: 2;
-    grid-row 1;
-}
-#release-tracks {
-    grid-column: 1 /span 2;
-    grid-row: 2;
-}
-#content {
-    width: 90%;
-    margin: 1em auto;
-    margin-bottom: 3em;
-}
-
-nav {
-    display: flex;
-    align-items: center;
-    height: 3em;
-    background-color: #2d2d2d;
-}
-nav a {
-    margin: 1em;
-}
-nav form {
-    margin: 1em;
-}
-#player {
-    display: flex;
-    align-items: center;
-    flex-direction: row;
-    height: 3em;
-    padding: 0.25em;
-    background-color: #2d2d2d;
-    position: fixed;
     width: 100vw;
-    bottom: 0px;
-    z-index: 2;
-}
-#controls {
-    margin: auto;
-    min-width: 60em;
-    align-items: center;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-}
-
-#track-data {
-    display: flex;
-    flex-direction: row;
-    width: 20em;
-    margin-right: 3em;
-    gap: 0.5em;
-    align-items: center;
-}
-#playlist {
-    position: fixed;
-    background-color: #3d3d3d;
-    height: 100vh;
-    top: 0;
-    right: 0;
-    flex-direction: row;
-    width: 20em;
-    padding-right: 2em;
-    padding-left: 0.25em;
-    z-index: 0;
-}
-#track-data-text {
-    width: 15em;
-    display: flex;
-    flex-direction: column;
-}
-#player-name, #player-artist-credit, .release-item {
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-}
-#track-cover {
-    height: 3em;
-}
-#settings {
-    margin-left: 3em;
-    min-width: 20em;
-    display: flex;
-    flex-direction: column;
-}
-#time {
-    gap: 0.25em;
-    display: flex; 
-    flex-direction: row;
-    left: 8em;
-}
-#play:before, .play:before {
-    content: "▶";
-}
-.queue:before {
-    content: "➕";
-}
-#pause:before {
-    content: "❚❚";
-}
-#next:before {
-    content: "⏭";
-}
-#prev:before {
-    content: "⏮";
-}
-#playlist-toggle:before {
-    content: "📄";
-}
-#seek-slider {
-    width: 100%;
     margin: 0;
 }
-#track-love:before {
-    content: "❤";
+#content {
+    width: 70vw;
+    margin: 1rem auto;
+    margin-bottom: 5rem;
 }
-.small-release-img {
-    width: 100%;
+.release-cover {
+    width: 20rem;
 }
-.release-item {
-    width: 10vw;
+.cover {
+    height: 3rem;
+}
+.flex-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.flex-column {
     display: flex;
     flex-direction: column;
 }
-.release-item * {
-    margin-right: auto;
+.wrap {
+    flex-wrap: wrap;
+}
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+.track-list li {
+    margin: 1rem 0;
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+}
+img {
+    width: 100%;
+}
+nav {
+    padding: 0 1rem;
+    height: 3rem;
+}
+form {
+    margin: 0;
+}
+#player, nav {
+    background-color: #2d2d2d;
+}
+#player {
+    height: 4rem;
+    position: fixed;
+    bottom: 0px;
+    width: 100vw;
 }
 .release-list {
     display: flex;
     flex-wrap: wrap;
-    column-gap: 1em;
+    gap: 1rem;
 }
+.release-list li {
+    margin-top: auto;
+    width: 15rem;
+}
+span, a {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.volume::before { content: "🔊"; }
+.muted::before { content: "🔇"; }
+.previous::before { content: "⏮"; }
+.play::before { content: "▶"; }
+.pause::before { content: "⏸"; }
+.next::before { content: "⏭"; }
+.queue::before { content: "➕"; }

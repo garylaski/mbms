@@ -1,15 +1,17 @@
-<div id="release-content">
-    <img id="release-cover" src="/media/{{release.coverUrl}}"/>
-    <div id="release-info">
-        <h1 id="title" class="release-name">{{release.name}}</h1>
-        <h2 id="release-artist-credit">{{release.artistCredit}}</h2>
-        <h3 id="release-date">{{release.date}}</h3>
-        <div class="release-controls">
-            <button class="play" onclick="play_tracks({{tracks.id}})"></button>
-            <button class="queue" onclick="add_tracks({{tracks.id}})"></button>
+<div class="flex-column">
+    <div class="flex-row">
+        <img class="release-cover" src="/media/{{release.coverUrl}}"/>
+        <div>
+            <h1 id="title" class="release-name">{{release.name}}</h1>
+            <h2 class="artist-credit">{{release.artistCredit}}</h2>
+            <h3>{{release.date}}</h3>
+            <div>
+                <button class="play" onclick="play_tracks({{tracks.id}})"></button>
+                <button class="queue" onclick="add_tracks({{tracks.id}})"></button>
+            </div>
         </div>
     </div>
-    <ul id="release-tracks">
+    <ul class="track-list">
         {{release.tracks}}
     </ul>
 </div>

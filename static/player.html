@@ -1,38 +1,29 @@
-<div id="player">
-    <audio id="audio">
-        <source src="">
-    </audio>
-    <div id="settings">
-    </div>
-    <div id="controls">
-        <div id="buttons">
-            <button id="prev" onclick="prev_track()"></button>
-            <button id="play" onclick="toggle()"></button>
-            <button id="next" onclick="next_track()"></button>
-        </div>
-        <div id="time">
-            <input type="range" id="seek-slider" max="100" value="0">
-            <span id="player-current-length">0:00</span>
-            <span>/</span>
-            <span id="player-length">0:00</span>
-        </div>
-    </div>
-    <div id="track-data">
-        <a href="" id="release-url" onclick="">
-            <img id="track-cover" src="">
+<div id="player" class="flex-col">
+    <div class="flex-row">
+        <audio id="audio">
+            <source src="">
+        </audio>
+        <a href="" class="release-url" onclick="">
+            <img class="cover" src="">
         </a>
-        <div id="track-data-text">
-            <span id="player-name"></span>
-            <span id="player-artist-credit"></span>
+        <div class="flex-column">
+            <span class="track-name"></span>
+            <span class="artist-credit"></span>
         </div>
-        <div id="track-actions">
-            <button id="track-love"></button>
-            <button id="playlist-toggle" onclick="toggle_playlist()"></button>
+            <div>
+                <button class="previous" onclick="prev_track()"></button>
+                <button class="play" onclick="toggle()"></button>
+                <button class="next" onclick="next_track()"></button>
+            </div>
+            <div>
+                <span id="player-current-length">0:00</span>
+                <span>/</span>
+                <span id="player-length">0:00</span>
+            </div>
+        <div>
+            <button class="volume" onclick="toggle_vol(this)"></button>
+            <input type="range" class="volume-slider" min="0" max="100" value="100" oninput="change_volume(this.value)">
         </div>
     </div>
-</div>
-<div id="playlist" style="display: none">
-    <h2>Playlist</h2>
-    <ol id="playlist-list">
-    </ol>
+    <input type="range" id="seek-slider" max="100" value="0" oninput="seek(this.value)">
 </div>

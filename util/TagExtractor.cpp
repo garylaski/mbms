@@ -4,10 +4,7 @@
 #include <taglib/tstring.h>
 #include <taglib/tstringlist.h>
 #include <taglib/tfile.h>
-#include <taglib/mp4atom.h>
-#include <taglib/mp4file.h>
-#include <taglib/mpegfile.h>
-#include <taglib/id3v2tag.h>
+#include <taglib/apefile.h>
 #include <taglib/tbytevector.h>
 #include <curl/curl.h>
 #include "TagExtractor.h"
@@ -22,22 +19,13 @@ TagExtractor::TagExtractor(DatabaseManager* database_manager):
     void TagExtractor::extract(std::filesystem::path const* path) {
         m_filename = path->c_str();
         TagLib::FileRef f(m_filename);
-        m_properties = f.file()->properties();
-        m_track.length = f.audioProperties()->lengthInMilliseconds();
-        if (m_properties.unsupportedData().size() > 0) {
-            for (auto const& data : m_properties.unsupportedData()) {
-                TagLib::StringList header = TagLib::StringList::split(data, ":");
-                long start = f.file()->find(header[2].data(TagLib::String::Type::UTF8));
-                f.file()->seek(start);
-                long end = f.file()->find(header[0].data(TagLib::String::Type::UTF8), start);
-                f.file()->seek(start + header[2].size());
-                TagLib::ByteVector rdata = f.file()->readBlock(end - start - header[2].size());
-
-                TagLib::ByteVectorList values = TagLib::ByteVectorList::split(rdata, TagLib::ByteVector::fromCString("data"));
-                values.erase(values.begin());
-                TagLib::StringList list(values);
-                m_properties.insert(header[2].upper().toCString(true), list);
-            }
+        if (f.file() == NULL) {
+            TagLib::APE::File file(m_filename);
+            m_properties = file.properties();
+            m_track.length = file.length();
+        } else {
+            m_properties = f.file()->properties();
+            m_track.length = f.audioProperties()->lengthInMilliseconds();
         }
         m_release.mbid = m_properties["MUSICBRAINZ_ALBUMID"][0].toCString();
         if ((m_track.release = m_database_manager->get_release_id(m_release.mbid)) == 0) {
@@ -47,8 +35,6 @@ TagExtractor::TagExtractor(DatabaseManager* database_manager):
                 for (int i = 0; i < m_properties["MUSICBRAINZ_ALBUMARTISTID"].size(); i++) {
                     m_artist.mbid = m_properties["MUSICBRAINZ_ALBUMARTISTID"][i].toCString();
                     m_artist_credit_name.artist_credit = m_release.artist_credit;
-                    m_artist_credit_name.name = m_properties["ALBUMARTISTS"][i].toCString(true);
-                    return;
                     m_artist_credit_name.name = m_properties["ALBUMARTISTS"][i].toCString(true);
                     if ((m_artist_credit_name.artist = m_database_manager->get_artist_id(m_artist.mbid)) == 0) {
                         m_artist_credit_name.artist = m_database_manager->add_artist(&m_artist);
@@ -60,7 +46,9 @@ TagExtractor::TagExtractor(DatabaseManager* database_manager):
             m_release.type = m_database_manager->add_release_type(&m_type);
             m_release.name = m_properties["ALBUM"][0].toCString(true);
             m_release.cover_url = find_cover_url(path->parent_path().string().c_str());
-            m_release.date = m_properties["DATE"][0].toCString();
+            if (m_properties["DATE"].size() > 0) {
+                m_release.date = m_properties["DATE"][0].toCString();
+            }
             m_track.release = m_database_manager->add_release(&m_release);
         }
         m_track.mbid = m_properties["MUSICBRAINZ_TRACKID"][0].toCString();

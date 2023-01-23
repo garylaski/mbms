@@ -1,0 +1,10 @@
+<li class="flex-column">
+    <a href="/release/{{release.mbid}}" onclick="ajax('/release/{{release.mbid}}'); return false;">
+        <img src="/media/{{release.coverUrl}}" alt="{{release.name}}"/>
+    </a>
+    <a href="/release/{{release.mbid}}" onclick="ajax('/release/{{release.mbid}}'); return false;">
+        {{release.name}}
+    </a>
+    <span>{{release.artistCredit}}</span>
+    <span>{{release.date}}</span>
+</li>

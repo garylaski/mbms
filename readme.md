@@ -1,10 +1,19 @@
-- ajax queries repond with entire page, not just new material.
-    - seperate ajax endpoint /ajax/
-    - refactor go artist, track, release handlers
-    - add new ajax handlers for artist, track, release
 - cache album art
 - add all artists,releases,tracks page
 - other sqlite drivers for performance
     - reading parallelism
 - add playlist feature
 - add love feature
+- artist credit:
+    - mean: 25
+    - stdev: 22
+- release title:
+    - mean: 20
+    - stdev: 12
+- track name:
+    - mean: 20
+    - stdev: 14
+- artist name:
+    - mean: 12
+    - stdev: 6
+- 
