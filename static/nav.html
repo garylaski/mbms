@@ -1,7 +1,7 @@
 <nav class="flex-row">
-    <a href="/artists">Artists</a> |
-    <a href="/releases">Releases</a> |
-    <a href="/tracks">Tracks</a> |
+    <a href="/artists" onclick="ajax('/artists'); return false;">Artists</a> |
+    <a href="/releases" onclick="ajax('/releases'); return false;">Releases</a> |
+    <a href="/tracks" onclick="ajax('/tracks'); return false;">Tracks</a> |
     <form onsubmit="ajax('/search?q='+q.value); return false;" method="post">
         <input type="text" name="q" placeholder="search"/>
         <input type="submit" value="Search"/>

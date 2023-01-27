@@ -239,7 +239,7 @@ func (server Server) generateArtistListHTML(title string, rows *sql.Rows) string
     }
     html := server.listHTML
     html = strings.Replace(html, "{{title}}", title, 1)
-    html = strings.Replace(html, "{{type}}", "artist-artist-rel", 1)
+    html = strings.Replace(html, "{{type}}", "artist", 1)
     html = strings.Replace(html, "{{items}}", items, 1)
     return html
 }
