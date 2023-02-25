@@ -97,7 +97,16 @@ function ajax(url) {
     ajax_load(url);
     window.history.pushState({}, "", url);
 }
-
+function rest(url, params, ajax_url) {
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", "/rest/" + url, false);
+    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhr.send(new URLSearchParams(params).toString());
+    if (ajax_url) {
+        ajax_load(ajax_url);
+    }
+    return xhr.responseText;
+}
 function update_player_time() {
     let audio = document.getElementById("audio");
     let player_current_time = document.getElementById("player-current-length");
@@ -139,4 +148,18 @@ window.onpopstate = function (e) {
 window.onload = function() {
     let audio = document.getElementById("audio");
     audio.addEventListener("timeupdate", update_player_time);
+}
+function deletePlaylist(id) {
+    if (confirm("Are you sure you want to delete this playlist?")) {
+        rest("deletePlaylist", {id: id}, "playlists");
+    }
+}
+function choosePlaylist(id) {
+    let chooser = document.getElementById("chooser");
+    chooser.style.display = "block";
+    chooser.innerHTML = rest("getPlaylists", {fmt: "html", track: id});
+}
+function addToPlaylist(trackid, playlistid) {
+    rest("updatePlaylist", {playlistId: playlistid, songIdToAdd: trackid});
+    document.getElementById("chooser").style.display = "none";
 }

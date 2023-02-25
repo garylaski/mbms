@@ -2,8 +2,11 @@
     <a href="/artists" onclick="ajax('/artists'); return false;">Artists</a> |
     <a href="/releases" onclick="ajax('/releases'); return false;">Releases</a> |
     <a href="/tracks" onclick="ajax('/tracks'); return false;">Tracks</a> |
+    <a href="/playlists" onclick="ajax('/playlists'); return false;">Playlists</a> |
     <form onsubmit="ajax('/search?q='+q.value); return false;" method="post">
         <input type="text" name="q" placeholder="search"/>
         <input type="submit" value="Search"/>
     </form>
 </nav>
+<div id="chooser">
+</div>

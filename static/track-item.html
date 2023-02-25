@@ -6,5 +6,13 @@
     </div>
     <button class="play" onclick="play_track('{{track.id}}')"></button>
     <button class="queue" onClick="add_track('{{track.id}}')"></button>
+    <div class="dropdown">
+        <button class="more"></button>
+        <ul class="dropdown-list">
+            <li>
+                <a href="#" onclick="choosePlaylist('{{track.id}}')">Add to playlist</a>
+            </li>
+        </ul>
+    </div>
     <span>{{track.length}}</span>
 </li>

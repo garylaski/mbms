@@ -20,8 +20,10 @@ type Server struct {
     trackItemHTML    string
     listHTML         string
     artistItemHTML   string
-    dragTrackHTML    string
     headHTML         string
+    playlistItemHTML string
+    editListHTML     string
+    playlistSelectorItemHTML string
     artist_artist_rel_map map[string][2]string
 }
 func convertMsToTime(ms int) string {
@@ -50,7 +52,7 @@ func (server Server) generateTrackListHTML(title string, rows *sql.Rows) string 
         }
         items += server.trackItemHTML
         items = strings.Replace(items, "{{track.name}}", name, 1)
-        items = strings.Replace(items, "{{track.id}}", id, 2)
+        items = strings.Replace(items, "{{track.id}}", id, 3)
         items = strings.Replace(items, "{{track.number}}", number, 1)
         items = strings.Replace(items, "{{track.length}}", convertMsToTime(length), 1)
         items = strings.Replace(items, "{{track.artistCredit}}", server.generateArtistCreditHTML(artist_credit_id), 1)
@@ -74,7 +76,7 @@ func (server Server) generateDraggableTrackListHTML(title string, rows *sql.Rows
         if err != nil {
             log.Println("generateTrackListHTML: ", err)
         }
-        items += server.dragTrackHTML
+        items += server.trackItemHTML
         items = strings.Replace(items, "{{track.name}}", name, 1)
         items = strings.Replace(items, "{{track.id}}", id, 2)
         items = strings.Replace(items, "{{track.number}}", number, 1)
@@ -138,7 +140,7 @@ func (server Server) generateReleaseHTML(mbid string) string {
         }
         trackHTML = server.trackItemHTML
         trackHTML = strings.Replace(trackHTML, "{{track.name}}", name, 1)
-        trackHTML = strings.Replace(trackHTML, "{{track.id}}", id, 2)
+        trackHTML = strings.Replace(trackHTML, "{{track.id}}", id, 3)
         trackHTML = strings.Replace(trackHTML, "{{track.number}}", number, 1)
         trackHTML = strings.Replace(trackHTML, "{{track.length}}", convertMsToTime(length), 1)
         trackHTML = strings.Replace(trackHTML, "{{track.artistCredit}}", server.generateArtistCreditHTML(artist_credit_id), 1)
@@ -317,6 +319,36 @@ func (server Server) updatePlaylist(id string, tracks string, remove string) str
     }
     return "OK"
 }
+func (server Server) createPlaylist(name string) string {
+    query := "INSERT INTO playlist (name) VALUES (?)"
+    _, err := server.db.Exec(query, name)
+    if err != nil {
+        log.Println("createPlaylist: ", err)
+    }
+    return "OK"
+}
+func (server Server) generatePlaylistsHTML() string {
+    query := "SELECT rowid,name FROM playlist"
+    rows, err := server.db.Query(query)
+    if err != nil {
+        log.Println("generatePlaylistsHTML: ", err)
+    }
+    var id, name, items string
+    for rows.Next() {
+        err := rows.Scan(&id, &name)
+        if err != nil {
+            log.Println("generatePlaylistsHTML: ", err)
+        }
+        items += server.playlistItemHTML
+        items = strings.Replace(items, "{{name}}", name, 1)
+        items = strings.Replace(items, "{{id}}", id, 3)
+    }
+    html := server.editListHTML
+    html = strings.Replace(html, "{{title}}", "Playlists", 1)
+    html = strings.Replace(html, "{{type}}", "playlist", 1)
+    html = strings.Replace(html, "{{items}}", items, 1)
+    return html
+}
 func (server Server) generatePlaylistHTML(id string) string {
     query := "SELECT name FROM playlist WHERE rowid = ?"
     var name string
@@ -329,7 +361,7 @@ func (server Server) generatePlaylistHTML(id string) string {
     if err != nil {
         log.Println("generatePlaylistHTML: ", err)
     }
-    return server.generateDraggableTrackListHTML(name, rows)
+    return server.generateTrackListHTML(name, rows)
 }
 func (server Server) generateReleasesHTML() string {
     query := "SELECT rowid,* FROM release ORDER BY RANDOM() LIMIT 50"
@@ -352,12 +384,54 @@ func (server Server) generatePage(content string) string {
     html += "</html>"
     return html
 }
-    func fsCache(fs http.Handler) http.HandlerFunc {
-        return func(w http.ResponseWriter, r *http.Request) {
-            w.Header().Set("Cache-Control", "public, max-age=31536000")
-            fs.ServeHTTP(w, r)
-        }
+func fsCache(fs http.Handler) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Cache-Control", "public, max-age=31536000")
+        fs.ServeHTTP(w, r)
     }
+}
+func (server Server) deletePlaylist(id string) string {
+    query := "DELETE FROM playlist WHERE rowid = ?"
+    _, err := server.db.Exec(query, id)
+    if err != nil {
+        log.Println("deletePlaylist: ", err)
+    }
+    query = "DELETE FROM playlist_track WHERE playlist = ?"
+    _, err = server.db.Exec(query, id)
+    if err != nil {
+        log.Println("deletePlaylist: ", err)
+    }
+    return "OK"
+}
+func (server Server) generatePlaylistSelectorHTML(rows* sql.Rows, tid string) string {
+    var id, name, items string
+    for rows.Next() {
+        err := rows.Scan(&id, &name)
+        if err != nil {
+            log.Println("generatePlaylistSelectorHTML: ", err)
+        }
+        items += server.playlistSelectorItemHTML
+        items = strings.Replace(items, "{{name}}", name, 1)
+        items = strings.Replace(items, "{{pid}}", id, 1)
+        items = strings.Replace(items, "{{tid}}", tid, 1)
+    }
+    html := server.listHTML
+    html = strings.Replace(html, "{{title}}", "Playlists", 1)
+    html = strings.Replace(html, "{{type}}", "playlist-chooser", 1)
+    html = strings.Replace(html, "{{items}}", items, 1)
+    return html
+}
+func (server Server) getPlaylists(format string, track string) string {
+    query := "SELECT rowid,name FROM playlist"
+    rows, err := server.db.Query(query)
+    if err != nil {
+        log.Println("getPlaylists: ", err)
+    }
+    if format == "html" {
+        return server.generatePlaylistSelectorHTML(rows, track)
+    }
+    return "OK"
+}
 func main() {
     server := Server{}
     mux := http.NewServeMux()
@@ -375,8 +449,12 @@ func main() {
     artistHTML, err := os.ReadFile("./static/artist.html")
     listHTML, err := os.ReadFile("./static/list.html")
     artistItemHTML, err := os.ReadFile("./static/artist-item.html")
-    dragTrackHTML, err := os.ReadFile("./static/dragTrack.html")
-    server.dragTrackHTML = string(dragTrackHTML)
+    playlistItemHTML, err := os.ReadFile("./static/playlist-item.html")
+    editListHTML, err := os.ReadFile("./static/edit-list.html")
+    playlistSelectorItemHTML, err := os.ReadFile("./static/playlist-selector-item.html")
+    server.playlistSelectorItemHTML = string(playlistSelectorItemHTML)
+    server.editListHTML = string(editListHTML)
+    server.playlistItemHTML = string(playlistItemHTML)
     server.navHTML = string(navHTML)
     server.playerHTML = string(playerHTML)
     server.releaseHTML = string(releaseHTML)
@@ -413,9 +491,15 @@ func main() {
         id := r.URL.Path[10:]
         fmt.Fprint(w, server.generatePage(server.generatePlaylistHTML(id)))
     })
+    mux.HandleFunc("/playlists", func(w http.ResponseWriter, r *http.Request) {
+        fmt.Fprint(w, server.generatePage(server.generatePlaylistsHTML()))
+    })
     mux.HandleFunc("/ajax/playlist/", func(w http.ResponseWriter, r *http.Request) {
         id := r.URL.Path[15:]
         fmt.Fprint(w, server.generatePlaylistHTML(id))
+    })
+    mux.HandleFunc("/ajax/playlists", func(w http.ResponseWriter, r *http.Request) {
+        fmt.Fprint(w, server.generatePlaylistsHTML())
     })
     mux.HandleFunc("/ajax/release/", func(w http.ResponseWriter, r *http.Request) {
         mbid := r.URL.Path[14:]
@@ -436,11 +520,42 @@ func main() {
         id := r.URL.Query().Get("id")
         fmt.Fprint(w, server.getTrack(id))
     })
+    mux.HandleFunc("/rest/getPlaylists", func(w http.ResponseWriter, r *http.Request) {
+        err := r.ParseForm()
+        if err != nil {
+            log.Fatal(err)
+        }
+        format := r.Form.Get("fmt")
+        id := r.Form.Get("track")
+        fmt.Fprint(w, server.getPlaylists(format, id))
+    })
+
     mux.HandleFunc("/rest/updatePlaylist", func(w http.ResponseWriter, r *http.Request) {
-        id := r.URL.Query().Get("playlistId")
-        tracks := r.URL.Query().Get("songIdToAdd")
-        remove := r.URL.Query().Get("songIndexToRemove")
+        err := r.ParseForm()
+        if err != nil {
+            log.Fatal(err)
+        }
+        id := r.Form.Get("playlistId")
+        tracks := r.Form.Get("songIdToAdd")
+        remove := r.Form.Get("songIndexToRemove")
         fmt.Fprint(w, server.updatePlaylist(id, tracks, remove))
+    })
+    mux.HandleFunc("/rest/createPlaylist", func(w http.ResponseWriter, r *http.Request) {
+        err := r.ParseForm()
+        if err != nil {
+            log.Fatal(err)
+        }
+        name := r.Form.Get("name")
+        fmt.Fprint(w, server.createPlaylist(name))
+    })
+    mux.HandleFunc("/rest/deletePlaylist", func(w http.ResponseWriter, r *http.Request) {
+        err := r.ParseForm()
+        if err != nil {
+            log.Fatal(err)
+        }
+        id := r.Form.Get("id")
+        log.Println(id)
+        fmt.Fprint(w, server.deletePlaylist(id))
     })
 
     mux.Handle("/media/", http.StripPrefix("/media/", fsCache(http.FileServer(http.Dir("/")))))
