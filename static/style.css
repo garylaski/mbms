@@ -18,6 +18,7 @@ a:hover {
 #content {
     max-width: 70rem;
     margin: 1rem auto 5rem auto;
+    padding: 0 1rem;
 }
 .release-cover {
     width: 20rem;
@@ -79,6 +80,8 @@ form {
 }
 span, a {
     line-height: 1.3rem;
+}
+.overflow {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
