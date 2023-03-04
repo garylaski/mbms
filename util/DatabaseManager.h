@@ -25,6 +25,7 @@ private:
     const char* m_database_path;
     sqlite3_stmt* m_statement;
     char const* m_query;
+    int m_last_artist;
 };
 
 

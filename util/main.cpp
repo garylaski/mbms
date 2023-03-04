@@ -18,7 +18,7 @@ int main(int argc, char** argv)
         std::cout << "Usage: " << argv[0] << " <music directory>" << std::endl;
         return 1;
     }
-    DatabaseManager database_manager("../../mb.db");
+    DatabaseManager database_manager("/home/gary/repos/mbms/mb.db");
     TagExtractor tag_extractor(&database_manager);
     for (const auto & entry : std::filesystem::recursive_directory_iterator(argv[1]))
     {

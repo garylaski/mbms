@@ -21,6 +21,17 @@ DatabaseManager::DatabaseManager(char const* database_path):
     if (sqlite3_exec(m_database, schema, NULL, NULL, NULL) != SQLITE_OK) {
         throw std::runtime_error("Failed to create database schema");
     }
+    sqlite3* file;
+    sqlite3_open(database_path, &file);
+    sqlite3_backup* backup = sqlite3_backup_init(m_database, "main", file, "main");
+    sqlite3_backup_step(backup, -1);
+    sqlite3_backup_finish(backup);
+    sqlite3_close(file);
+    m_query = "SELECT COUNT(1) FROM artist";
+    sqlite3_prepare_v2(m_database, m_query, -1, &m_statement, NULL);
+    sqlite3_step(m_statement);
+    m_last_artist = sqlite3_column_int(m_statement, 0);
+    sqlite3_finalize(m_statement);
 }
 DatabaseManager::~DatabaseManager() {
     sqlite3* file;
@@ -139,9 +150,10 @@ int DatabaseManager::add_t_artist_artist(char const* name) {
 }
 bool DatabaseManager::update_artist_info() {
     // select all artists and loop over them
-    m_query = "SELECT rowid, mbid FROM artist";
+    m_query = "SELECT rowid, mbid FROM artist WHERE rowid > (?)";
     sqlite3_stmt *statement, *statement2;
     sqlite3_prepare_v2(m_database, m_query, -1, &statement2, NULL);
+    sqlite3_bind_int(statement2, 1, m_last_artist);
     MusicBrainz5::CQuery Query("ArtistName");
     MusicBrainz5::CMetadata metadata;
     MusicBrainz5::CQuery::tParamMap params;
@@ -149,6 +161,7 @@ bool DatabaseManager::update_artist_info() {
     while (sqlite3_step(statement2) == SQLITE_ROW) {
         int id = sqlite3_column_int(statement2, 0);
         char const* mbid = (char const*)sqlite3_column_text(statement2, 1);
+        std::cout << mbid << id << std::endl;
         metadata = Query.Query("artist", mbid, "", params);
         // loop over all artist relations
         int direction;
