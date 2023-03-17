@@ -10,6 +10,7 @@ public:
     TagExtractor(DatabaseManager* const);
     ~TagExtractor();
     void extract(std::filesystem::path const*);
+    void extract_path(char const*);
 private:
     DatabaseManager* m_database_manager;
     TagLib::PropertyMap m_properties;

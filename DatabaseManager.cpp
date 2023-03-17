@@ -21,12 +21,15 @@ DatabaseManager::DatabaseManager(char const* database_path):
     if (sqlite3_exec(m_database, schema, NULL, NULL, NULL) != SQLITE_OK) {
         throw std::runtime_error("Failed to create database schema");
     }
+    //TODO: Validate path is to a database of our schema
+    /*
     sqlite3* file;
     sqlite3_open(database_path, &file);
     sqlite3_backup* backup = sqlite3_backup_init(m_database, "main", file, "main");
     sqlite3_backup_step(backup, -1);
     sqlite3_backup_finish(backup);
     sqlite3_close(file);
+    */
     m_query = "SELECT COUNT(1) FROM artist";
     sqlite3_prepare_v2(m_database, m_query, -1, &m_statement, NULL);
     sqlite3_step(m_statement);
@@ -149,6 +152,7 @@ int DatabaseManager::add_t_artist_artist(char const* name) {
     return sqlite3_last_insert_rowid(m_database);
 }
 bool DatabaseManager::update_artist_info() {
+    std::cout << "updating artist info for last artist " << m_last_artist << std::endl;
     // select all artists and loop over them
     m_query = "SELECT rowid, mbid FROM artist WHERE rowid > (?)";
     sqlite3_stmt *statement, *statement2;

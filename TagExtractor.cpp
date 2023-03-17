@@ -81,3 +81,23 @@ char const* TagExtractor::find_cover_url(char const* path) {
     }
     return "";
 }
+bool is_audio_file(const std::filesystem::path ext)
+{
+    return ext == ".mp3" || ext == ".wav" || ext == ".ogg" || ext == ".flac" || ext == ".aac";
+}
+bool is_image_file(const std::filesystem::path ext)
+{
+    return ext == ".jpg" || ext == ".png";
+}
+void TagExtractor::extract_path(char const* path) {
+    for (const auto & entry : std::filesystem::recursive_directory_iterator(path))
+    {
+        if (entry.is_regular_file())
+        {
+            if (is_audio_file(entry.path().extension()))
+            {
+                TagExtractor::extract(&entry.path());
+            } 
+        }
+    }
+}
