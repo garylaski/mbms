@@ -1,19 +1,3 @@
-- cache album art
-- add all artists,releases,tracks page
-- other sqlite drivers for performance
-    - reading parallelism
-- add playlist feature
-- add love feature
-- artist credit:
-    - mean: 25
-    - stdev: 22
-- release title:
-    - mean: 20
-    - stdev: 12
-- track name:
-    - mean: 20
-    - stdev: 14
-- artist name:
-    - mean: 12
-    - stdev: 6
-- 
+MusicBrainz Enabled Music Server (mbms)
+
+Dynamically generated web music player based off of musicbrainz tagged audio library.
