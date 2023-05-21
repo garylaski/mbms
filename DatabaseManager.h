@@ -18,6 +18,7 @@ public:
     int get_artist_credit_id(char const* name);
     int get_artist_id(char const* mbid);
     int get_t_artist_artist_id(char const* name);
+    int get_release(char const* mbid, std::string &name);
     bool update_artist_info();
 
 private:

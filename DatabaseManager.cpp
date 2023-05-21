@@ -212,3 +212,14 @@ bool DatabaseManager::update_artist_info() {
     sqlite3_finalize(statement2);
     return true;
 }
+
+int get_release(char const* mbid, std::string& name) {
+    m_query = "SELECT rowid,name FROM artist WHERE mbid = ?";
+    sqlite3_prepare_v2(m_database, m_query, -1, &m_statement, NULL);
+    sqlite3_bind_text(m_statement, 1, mbid, -1, SQLITE_STATIC);
+    sqlite3_step(m_statement);
+    int id = sqlite3_column_int(m_statement, 0);
+    name = sqlite3_column_int(m_statement, 1);
+    sqlite3_finalize(m_statement);
+    return id;
+}
