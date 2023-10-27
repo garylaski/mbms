@@ -1,0 +1,8 @@
+{
+    "name" : %q,
+    "mbid" : %q,
+    "number" : %d,
+    "length" : %d,
+    "artist_credit" : %q,
+    "release_mbid" : %q
+}
