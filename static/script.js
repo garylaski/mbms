@@ -1,85 +1,63 @@
-let playlist = [];
-let current_track = 0;
+var audio, play_button, key_buffer, num_buffer, index, playlist, current_track, volume;
+let prev_volume = 100;
 function add_track(id) {
-    let track = get_track_json(id);
-    playlist.push(track);
+    playlist.push(get_track_json(id));
 }
-function toggle() {
-    audio = document.getElementById("audio");
-    if (audio.paused) {
-        audio.play();
-        document.querySelector("#player .play").classList = "pause";
-    } else {
-        audio.pause();
-        document.querySelector("#player .pause").classList = "play";
-    }
-}
-function get_track_json(id) {
-    let url = "/rest/getTrack?id=" + id;
+function get_track_json(mbid) {
     let request = new XMLHttpRequest();
-    request.open("GET", url, false);
+    request.open("GET", "/track/" + mbid, false);
     request.send(null);
     return JSON.parse(request.responseText);
 }
-function play_track(id) {
-    let track = get_track_json(id);
+function play_track(mbid) {
+    audio.src = "/media/" + mbid;
+    play_button.classList = "pause";
+    audio.play();
+    let track = get_track_json(mbid);
     playlist = [track];
     current_track = 0;
-    let audio = document.getElementById("audio");
-    audio.src = "/media/" + playlist[current_track].url;
     set_player(track);
-    audio.play();
-    document.querySelector("#player .play").classList = "pause";
 }
-function play_tracks(ids) {
+function play_tracks(mbids) {
     playlist = [];
-    add_tracks(ids);
+    add_tracks(mbids);
     current_track = 0;
-    let audio = document.getElementById("audio");
-    audio.src = "/media/" + playlist[current_track].url;
-    set_player(playlist[current_track]);
+    audio.src = "/media/" + playlist[current_track].mbid;
     audio.play();
-    document.querySelector("#player .play").classList = "pause";
+    play_button.classList = "pause";
+    set_player(playlist[current_track]);
 }
 function add_tracks(ids) {
-    // Add tracks to playlist
-    for (i in ids) {
+    for (var i in ids) {
         add_track(ids[i]);
     }
 }
 function set_player(track) {
     let player = document.getElementById("player");
     player.querySelector(".track-name").innerHTML = track.name;
-    player.querySelector(".artist-credit").innerHTML = track.artist_credit_html;
-    player.querySelector(".cover").src = "/media/" + track.cover_url;
+    player.querySelector(".cover").src = "/media/" + track.release_mbid;
     player.querySelector("#player-length").innerHTML = new Date(track.length).toISOString().slice(14, 19);
     player.querySelector(".release-url").href = "/release/" + track.release_mbid;
     player.querySelector(".release-url").onclick = function() { ajax("/release/" + track.release_mbid); return false;};
     player.querySelector("#seek-slider").max = track.length;
+    player.querySelector(".artist-credit").innerHTML = track.artist_credit;
 }
 function next_track() {
     current_track++;
-    if (current_track >= playlist.length) {
-        // Stop playing
-        return;
+    if (current_track < playlist.length) {
+        audio.src = "/media/" + playlist[current_track].mbid;
+        set_player(playlist[current_track]);
+        audio.play();
     }
-    let audio = document.getElementById("audio");
-    audio.src = "/media/" + playlist[current_track].url;
-    set_player(playlist[current_track]);
-    audio.play();
 }
 function prev_track() {
     current_track--;
-    if (current_track < 0) {
-        // Stop playing
-        return;
+    if (current_track >= 0) {
+        audio.src = "/media/" + playlist[current_track].mbid;
+        set_player(playlist[current_track]);
+        audio.play();
     }
-    let audio = document.getElementById("audio");
-    audio.src = "/media/" + playlist[current_track].url;
-    set_player(playlist[current_track]);
-    audio.play();
 }
-
 function ajax_load(url) {
     let xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
@@ -92,7 +70,6 @@ function ajax_load(url) {
     xhr.open("GET", "/ajax/" + url, true);
     xhr.send();
 }
-
 function ajax(url) {
     ajax_load(url);
     window.history.pushState({}, "", url);
@@ -108,19 +85,9 @@ function rest(url, params, ajax_url) {
     return xhr.responseText;
 }
 function update_player_time() {
-    let audio = document.getElementById("audio");
-    let player_current_time = document.getElementById("player-current-length");
-    let seek_slider = document.getElementById("seek-slider");
-    current_time = new Date(audio.currentTime*1000).toISOString().slice(14, 19);
-    player_current_time.innerHTML = current_time;
-    seek_slider.value = audio.currentTime*1000;
+    document.getElementById("player-current-length").innerHTML = new Date(audio.currentTime*1000).toISOString().slice(14, 19);
+    document.getElementById("seek-slider").value = audio.currentTime*1000;
 }
-
-// After document loads add event listener to audio element
-document.addEventListener("DOMContentLoaded", function() {
-    document.getElementById("audio").addEventListener("ended", next_track);
-});
-let prev_volume = 100;
 function toggle_vol(e) {
     let slider = document.querySelector(".volume-slider");
     if (e.classList == "volume") {
@@ -135,31 +102,63 @@ function toggle_vol(e) {
     }
 }
 function seek(value) {
-    let audio = document.getElementById("audio");
     audio.currentTime = value/1000;
 }
 function change_volume(value) {
-    let audio = document.getElementById("audio");
     audio.volume = value/100;
+    setCookie("volume", value, 365);
 }
 window.onpopstate = function (e) {
     ajax_load(window.location.pathname + window.location.search);
 }
 window.onload = function() {
-    let audio = document.getElementById("audio");
+    play_button = document.querySelector("#play_button");
+    volume = document.querySelector(".volume-slider");
+    volume.value = getCookie("volume");
+    audio = document.getElementById("audio");
+    audio.volume = volume.value/100;
     audio.addEventListener("timeupdate", update_player_time);
+    audio.addEventListener("ended", next_track);
 }
-function deletePlaylist(id) {
-    if (confirm("Are you sure you want to delete this playlist?")) {
-        rest("deletePlaylist", {id: id}, "playlists");
+function setCookie(c_name,value,exdays)
+{
+    var exdate=new Date();
+    exdate.setDate(exdate.getDate() + exdays);
+    var c_value=escape(value) + ((exdays==null) ? "" : ("; expires="+exdate.toUTCString()));
+    document.cookie=c_name + "=" + c_value;
+}
+function getCookie(c_name)
+{
+    var i,x,y,ARRcookies=document.cookie.split(";");
+    for (i=0; i<ARRcookies.length; i++)
+    {
+        x=ARRcookies[i].substr(0,ARRcookies[i].indexOf("="));
+        y=ARRcookies[i].substr(ARRcookies[i].indexOf("=")+1);
+        x=x.replace(/^\s+|\s+$/g,"");
+        if (x==c_name)
+        {
+            return unescape(y);
+        }
     }
 }
-function choosePlaylist(id) {
+function toggle_play() {
+    if (audio.src) {
+        if (audio.paused) {
+            play_button.classList = "pause";
+            audio.play();
+        } else {
+            play_button.classList = "play";
+            audio.pause();
+        }
+    }
+}
+function open_playlist_chooser(mbid) {
+    let inner_html = rest("playlist/list", {"track":mbid}, false);
     let chooser = document.getElementById("chooser");
     chooser.style.display = "block";
-    chooser.innerHTML = rest("getPlaylists", {fmt: "html", track: id});
+    chooser.innerHTML = inner_html;
 }
-function addToPlaylist(trackid, playlistid) {
-    rest("updatePlaylist", {playlistId: playlistid, songIdToAdd: trackid});
+function add_to_playlist(playlist_id, mbid) {
+    rest("playlist/add", {"playlist":playlist_id, "track":mbid}, false);
     document.getElementById("chooser").style.display = "none";
 }

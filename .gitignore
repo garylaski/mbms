@@ -1,3 +1,6 @@
-util/build/*
-mb.db
+static/*html
 mbms
+mbms.test
+*out
+pgsql/
+start-postgres.sh

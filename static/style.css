@@ -24,12 +24,20 @@ a:hover {
     width: 20rem;
 }
 .cover {
-    height: 3rem;
+    height: 3.5rem;
 }
 .flex-row {
     display: flex;
     align-items: center;
     gap: 1rem;
+    padding: 0;
+}
+.flex-center {
+    justify-content: center;
+}
+.flex-row div {
+    margin-top: -0.4rem;
+    margin-left: -0.4rem;
 }
 .flex-column {
     display: flex;
@@ -127,3 +135,45 @@ span, a {
 .add::before { content: "➕"; }
 .delete::before { content: "🗑"; }
 .more::before { content: "⋮"; }
+button {
+    background-color: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+button:hover {
+    color: darkgrey;
+}
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #2d2d2d;
+    cursor: pointer;
+    height: 0.5rem;
+}
+input[type="range"]::-webkit-slider-runnable-track, input[type="range"]::-moz-range-track {
+    height: 100%;
+    margin: 0;
+    background: darkgrey;
+}
+input[type="range"]::-moz-range-progress {
+    height: 100%;
+    margin: 0;
+    background: #FFFFFF;
+}
+
+input[type="range"]::-webkit-slider-thumb, input::-moz-range-thumb {
+    background: #FFFFFF;
+    border: none;
+    height: 0.5rem;
+    width: 0.5rem;
+    -webkit-appearance: none;
+}
+.volume-div {
+    padding-right: 1rem;
+}
+.track-num {
+    width: 1.5rem;
+    text-align: right;
+    margin-right: 0.5rem;
+}

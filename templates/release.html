@@ -1,0 +1,17 @@
+<div class="flex-column">
+    <div class="flex-row">
+        <img class="release-cover" src="/%s"/>
+        <div>
+            <h1 id="title" class="release-name">%s</h1>
+            <h2 class="artist-credit">%s</h2>
+            <h3>%s</h3>
+            <div>
+                <button class="play" onclick='play_tracks([%s])'></button>
+                <button class="queue" onclick='add_tracks([%[5]s])'></button>
+            </div>
+        </div>
+    </div>
+    <ul class="track-list">
+        %s
+    </ul>
+</div>
